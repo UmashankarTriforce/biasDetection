@@ -2,17 +2,21 @@ from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
 from tweepy import Stream
 from os import environ as env
+import json
 
 access_token = env['access_token']
 access_token_secret = env['access_token_secret']
 consumer_key = env['consumer_key']
 consumer_secret = env['consumer_secret']
 
+raw_data = []
 #This is a basic listener that just prints received tweets to stdout.
 class StdOutListener(StreamListener):
 
     def on_data(self, data):
-        print(data)
+        data = json.loads(data)
+        with open('raw_data.json', 'a') as outfile:
+            json.dump(data, outfile, indent = 4)
         return True
 
     def on_error(self, status):
