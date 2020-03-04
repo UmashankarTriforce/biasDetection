@@ -4,6 +4,43 @@ import random
 import numpy as np
 
 
+def score_with_node(G, x, total_score, sizes, component):
+    new_size = 1
+    neighbors = list(G.neighbors(x))
+    neighborhoodSize = len(neighbors)
+    marked = []
+    for i in range(G.size()):
+        marked[i] = 0
+    for i in range(neighborhoodSize):
+        neighbor = neighbors[i]
+        comp = component[neighbor]
+        if(comp != 0 and not(marked[comp])):
+            marked[comp] = 1
+            comp_score = sizes[comp] * (sizes[comp] - 1) / 2
+            total_score = total_score - comp_score
+            new_size = new_size + sizes[comp]
+    
+    result = new_size * (new_size - 1)/2 + total_score
+    for i in range(1, neighborhoodSize):
+        marked[component[neighbors[i]]] = 0
+
+    return result
+
+def next_candidate(G, component, sizes):
+    min_score = -np.inf
+    candidate = -1
+    total_score = 0
+    max_component = max(G.nodes())
+    for c in range(max_component):
+        total_score += sizes[c]*(sizes[c] - 1) / 2
+
+    for node in G.size():
+        if(component[G.nodes[node]] == 0):
+            score = score_with_node(node, total_score)
+            if(score < min_score):
+                min_score = score
+                candidate = G.nodes[node]
+    return candidate
 
 
 
