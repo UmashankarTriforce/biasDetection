@@ -205,8 +205,6 @@ tweets_final.head(5)
 
 # Now, it's time to initialize the Graph. We can do this by calling the function .Graph() of NetworkX.
 
-
-
 # There are two other important functions to create a Graph. The first one is add_node()and the second one, add_edge both with a very descriptive name. Let's pay attention to the syntax of add_edge:  
 # 
 # `Graph.add_edge(u_of_edge, v_of_edge, **attr)`  
@@ -240,3 +238,163 @@ for index, tweet in tweets_final.iterrows():
 
 
 print(f"There are {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges present in the Graph")
+
+
+# The degree of a node u, denoted as deg(u), is the number of edges that occur to that node. In simpler words, the number of connections a particular node has. The maximum degree of a graph and the minimum degree of a graph are the maximum and minimum degree of its nodes, respectively.
+
+# In[19]:
+
+
+degrees = [val for (node, val) in graph.degree()]
+
+
+# In[20]:
+
+
+print(f"The maximum degree of the Graph is {np.max(degrees)}")   
+print(f"The minimum degree of the Graph is {np.min(degrees)}")  
+
+
+# In[21]:
+
+
+print(f"The average degree of the nodes in the Graph is {np.mean(degrees):.1f}")  
+print(f"The most frequent degree of the nodes found in the Graph is {stats.mode(degrees)[0][0]}") 
+
+
+# An undirected graph is connected if, for every pair of nodes, there is a path between them. For that to happen, most of the nodes should have at least a degree of two, except for those denominated leaves which have a degree of 1. From the characteristics of the Graph, we can suspect that the graph is not connected. In order to confirm these, we can use `nx.is_connected`.
+
+# In[22]:
+
+
+if nx.is_connected(graph):
+    print("The graph is connected")
+else:
+    print("The graph is not connected")
+
+
+# Now, that we confirm that our Graph is not connected, we can check how many connected components it has:
+
+# In[23]:
+
+
+print(f"There are {nx.number_connected_components(graph)} connected components in the Graph")  
+
+
+# In[24]:
+
+
+largest_subgraph = max(nx.connected_component_subgraphs(graph), key=len)
+
+
+# In[25]:
+
+
+print(f"There are {largest_subgraph.number_of_nodes()} nodes and {largest_subgraph.number_of_edges()} edges present in the largest component of the Graph")
+
+
+# In[26]:
+
+
+if nx.is_connected(largest_subgraph):
+    print("The graph is connected")
+else:
+    print("The graph is not connected")
+
+
+# Clustering and transitivity measure the tendency for nodes to cluster together or for edges to form triangles. In our context, they are measures of the extent to which the users interacting with one particular user tend to interact with each other as well. The difference is that transitivity weights nodes with a large degree higher. 
+# The clustering coefficient, a measure of the number of triangles in a graph, is calculated as the number of triangles connected to node i divided by the number of sets of two edges connected to node i (Triple nodes). While the transitivity coefficient is calculated as 3 multiply by the number of triangles in the network divided by the number of connected triples of nodes in the network. These two parameters are very important when analyzing social networks because it gives us an insight into how users tend to create tightly knot groups characterized by relatively high-dense ties.
+
+# In[27]:
+
+
+print(f"The average clustering coefficient is {nx.average_clustering(largest_subgraph)} in the largest subgraph")
+print(f"The transitivity of the largest subgraph is {nx.transitivity(largest_subgraph)}")
+
+
+# After that, we'll investigate some summary statistics, particularly related to distance, or how far away one node is from another random node. Diameter represents the maximum distance between any pair of nodes while the average distance tells us the average distance between any two nodes in the network.
+
+# In[28]:
+
+
+print(f"The diameter of our Graph is {nx.diameter(largest_subgraph)}")
+print(f"The average distance between any two nodes is {nx.average_shortest_path_length(largest_subgraph):.2f}")
+
+
+# Now, we are going to focus on **network centrality** which captures the importance of a node's position in the network considering: degree on the assumption that an important node will have many connections, closeness on the assumption that important nodes are close to other nodes, and finally, betweenness on the assumption that important nodes are well situated and connect other nodes. For this, we are going to use the following functions `degree_centrality`, `closenness_centrality` and `betwenness_centrality`, all which return a list of each node and its centrality score. We will particularly capture the node with the best score in each one.
+
+# In[29]:
+
+
+graph_centrality = nx.degree_centrality(largest_subgraph)
+
+
+# In[30]:
+
+
+max_de = max(graph_centrality.items(), key=itemgetter(1))
+
+
+# In[31]:
+
+
+graph_closeness = nx.closeness_centrality(largest_subgraph)
+
+
+# In[32]:
+
+
+max_clo = max(graph_closeness.items(), key=itemgetter(1))
+
+
+# In[33]:
+
+
+graph_betweenness = nx.betweenness_centrality(largest_subgraph, normalized=True, endpoints=False)
+
+
+# In[34]:
+
+
+max_bet = max(graph_betweenness.items(), key=itemgetter(1))
+
+
+# In[35]:
+
+
+print(f"the node with id {max_de[0]} has a degree centrality of {max_de[1]:.2f} which is the maximum of the Graph")
+print(f"the node with id {max_clo[0]} has a closeness centrality of {max_clo[1]:.2f} which is the maximum of the Graph")
+print(f"the node with id {max_bet[0]} has a betweenness centrality of {max_bet[1]:.2f} which is the maximum of the Graph")
+
+
+# Now, we can get to see how the Graph looks like. For that, we will use nx.drawing.layout to apply node positioning algorithms for the graph drawing. Specifically, we will use spring_layout that uses force-directed graph drawing which purpose is to position the nodes in two-dimensional space so that all the edges are of equal length and as few crossing edges as possible. It achieves this by assigning forces among the set of edges and nodes based on their relative positions and then uses this to simulate the motion of the edges and nodes. One of the parameters that we can adjust is k, the optimal distance between nodes; as we increase the value, the nodes will farther apart.  Once, that we got the positions, we are also going to create a special list so that we can draw the two nodes with higher centrality that we found in different colors to highlight them.
+
+# In[39]:
+
+
+node_and_degree = largest_subgraph.degree()
+colors_central_nodes = ['orange', 'red']
+central_nodes = ['331136088', '1191754450303623169']
+
+
+# In[40]:
+
+
+pos = nx.spring_layout(largest_subgraph, k=0.05)
+
+
+# After all that calculation, we'll use the functions `.draw_networkx_nodes()` and `.draw()`. And finally, we have the drawing of the largest connected component of our original Graph:
+
+# In[41]:
+
+
+plt.figure(figsize = (20,20))
+nx.draw(largest_subgraph, pos=pos, node_color=range(323), cmap=plt.cm.PiYG, edge_color="black", linewidths=0.3, node_size=60, alpha=0.6, with_labels=False)
+nx.draw_networkx_nodes(largest_subgraph, pos=pos, nodelist=central_nodes, node_size=300, node_color=colors_central_nodes)
+plt.savefig('graphfinal.png')
+plt.show()
+
+
+
+
+
