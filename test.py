@@ -2,6 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import random 
 import numpy as np
+from operator import itemgetter
 
 def any_neighbour_component(G, x, component, marked):
     neighbors = G.neighbors(x)
@@ -35,14 +36,14 @@ def unite(G, x, marked, united_comp, sizes, components):
 
     for i in range(len(marked)):
         marked[i] = 0
- 
-def score_with_node(G, x, total_score, sizes, component):
+    
+
+
+def score_with_node(G, x, total_score, marked, sizes, component):
     new_size = 1
     neighbors = list(G.neighbors(x))
     neighborhoodSize = len(neighbors)
-    marked = []
-    for i in range(G.size()):
-        marked[i] = 0
+    
     for i in range(neighborhoodSize):
         neighbor = neighbors[i]
         comp = component[neighbor]
@@ -54,24 +55,32 @@ def score_with_node(G, x, total_score, sizes, component):
     
     result = new_size * (new_size - 1)/2 + total_score
     for i in range(1, neighborhoodSize):
-        marked[component[neighbors[i]]] = 0
+        comp_i = component[neighbors[i]]
+        marked[comp_i] = 0
 
     return result
 
-def next_candidate(G, component, sizes):
-    min_score = -np.inf
-    candidate = -1
+def next_candidate(G, component, sizes, marked):
+    min_score = np.inf
+    candidate = 0
     total_score = 0
+    nodeList = G.nodes()
+    # print(len(component))
     max_component = max(G.nodes())
     for c in range(max_component):
         total_score += sizes[c]*(sizes[c] - 1) / 2
 
-    for node in G.size():
-        if(component[G.nodes[node]] == 0):
-            score = score_with_node(node, total_score)
+    for node in nodeList:
+        if(component[node] == 0):
+            
+            score = score_with_node(G, node, total_score, marked, sizes, component)
+            print(score, min_score)
             if(score < min_score):
+                
                 min_score = score
-                candidate = G.nodes[node]
+                # print(node)
+                candidate = node
+    # print(candidate)
     return candidate
 
 
@@ -120,22 +129,38 @@ def CNDP_serial(k, G):
         forbidden_count -= 1
     # print(NodeList, MIS)
     return list(set(NodeList) - set(MIS))
-
 if __name__ == "__main__":
-    k = 5
-
-    randomlist = random.sample(range(0, 4950), 3000)
+    k = 2
+    
+    randomlist = random.sample(range(0, 4950), 4800)
 
     G = nx.complete_graph(100)
     j = 0
-    for i in G.edges:
-        if(j in randomlist):
-            G.remove_edge(i[0], i[1])
+    G1 = nx.Graph()
+    G1.add_nodes_from(G)
+    edgeList = G.edges
+    for i in edgeList:
+        if(j not in randomlist):
+            G1.add_edge(i[0], i[1])
         j += 1
-    CNDP_serial(k, G)
-    # pos = nx.spring_layout(G)
+    # print(G.size(), G1.size(), len(G.nodes()))
+    
+    C_nodes = CNDP_serial(k, G1)
+    # critical_nodes = list(set(C_nodes))
+    # degree_all = []
+    # useless = []
+    # for i in G.nodes():
+    #     if(i in critical_nodes):
+    #         degree_all.append(G1.degree(i))
+    #     else:
+    #         useless.append(G1.degree(i))
+    # print(useless, degree_all)
+    
 
-    # nx.draw_networkx_nodes(G, pos, node_size=50)
-    # nx.draw_networkx_edges(G, pos, edgelist=G.edges)
+
+    # pos = nx.spring_layout(G1)
+
+    # nx.draw_networkx_nodes(G1, pos, node_size=50)
+    # nx.draw_networkx_edges(G1, pos, edgelist=G1.edges)
     # plt.show()
 
