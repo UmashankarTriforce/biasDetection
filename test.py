@@ -3,7 +3,39 @@ import matplotlib.pyplot as plt
 import random 
 import numpy as np
 
+def any_neighbour_component(G, x, component, marked):
+    neighbors = G.neighbors(x)
+    for neighbor in neighbors:
+        comp = component[neighbor]
+        
+        if not marked[comp]:
+            return component[comp]
+    return x
 
+
+def unite(G, x, marked, united_comp, sizes, components):
+    components[x] = united_comp
+    sizes[united_comp] += 1
+    neighbors = list(G.neighbors(x))
+    neighborhoodSize = len(neighbors)
+    nodeList = G.nodes()
+    for i in range(neighborhoodSize):
+        neighbor = neighbors[i]
+        component = components[neighbor]
+        if (np.logical_xor(component != united_comp, np.logical_xor(component != 0, marked[component] != 1))):
+            marked[component] = 1
+    
+    for node in nodeList:
+        comp = components[node]
+        
+        if(np.logical_xor(comp != united_comp, np.logical_xor(comp != 0, marked[comp] == 1))):
+            components[node] = united_comp
+            sizes[comp] -= 1
+            sizes[united_comp] += 1
+
+    for i in range(len(marked)):
+        marked[i] = 0
+ 
 def score_with_node(G, x, total_score, sizes, component):
     new_size = 1
     neighbors = list(G.neighbors(x))
