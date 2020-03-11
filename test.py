@@ -47,26 +47,30 @@ def next_candidate(G, component, sizes):
 def CNDP_serial(k, G):
     GSize = G.size()
     NodeList = G.nodes()
-    components = list()
+    component = list()
     for i in range(GSize):
-        components.append(0)
+        component.append(0)
 
     max_component = GSize
     sizes = list()
+    marked = list()
     for i in range(max_component):
         sizes.append(0)
+    for i in range(max_component):
+        marked.append(0)
 
     MIS = nx.maximal_independent_set(G)
 
-    component_id = 1
+    component_id = 0
     forbidden_count = 0
 
     for i in range(GSize):
         if(i in NodeList):
             component[i] = component_id
+            # print(len(sizes))
             sizes[component_id] = 1
             component_id += 1
-        else
+        else:
             forbidden_count += 1
 
     if forbidden_count < k:
@@ -76,7 +80,14 @@ def CNDP_serial(k, G):
             component[NodeList[x]] = 0
 
     while(forbidden_count > k):
-        cand_node = 
+        # print(component)
+        
+        cand_node = next_candidate(G, component, sizes, marked)
+        united_comp = any_neighbour_component(G, cand_node, component, marked)
+        unite(G, cand_node, marked, united_comp, sizes, component)
+        forbidden_count -= 1
+    # print(NodeList, MIS)
+    return list(set(NodeList) - set(MIS))
 
 if __name__ == "__main__":
     k = 5
