@@ -1,2 +1,5 @@
 environment
 raw_data.json
+.vs
+parallelCNDP/out
+twitterSentiment
