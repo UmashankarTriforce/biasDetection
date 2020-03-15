@@ -1,0 +1,15 @@
+#include "graph.h"
+
+int main() {
+	std::vector<std::vector <int> > test{
+		{3, 1},
+		{0, 2, 3},
+		{1, 3},
+		{2, 1, 0, 4},
+		{3}
+	};
+
+	Graph<int> Test(test);
+	return 0;
+
+}
