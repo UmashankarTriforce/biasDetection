@@ -1,7 +1,5 @@
 #include <graph.hpp>
 
-#include <vector>
-
 int main() {
 	std::vector<std::vector <int> > test{
 		{3, 1},
@@ -12,7 +10,6 @@ int main() {
 	};
 
 	Graph<int> Test(test);
-	Test.printGraph();
 	return 0;
 
 }
