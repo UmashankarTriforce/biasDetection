@@ -10,6 +10,7 @@ int main() {
 	};
 
 	Graph<int> Test(test);
+	Test.printGraph();
 	return 0;
 
 }
