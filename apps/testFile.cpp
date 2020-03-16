@@ -1,4 +1,6 @@
-#include "graph.h"
+#include <graph.hpp>
+
+#include <vector>
 
 int main() {
 	std::vector<std::vector <int> > test{

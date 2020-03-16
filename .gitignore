@@ -1,6 +1,6 @@
 environment
 raw_data.json
 .vs
-parallelCNDP/out
-parallelCNDP/build
+out
+build
 twitterSentiment

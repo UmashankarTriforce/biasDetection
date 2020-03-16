@@ -1,20 +1,8 @@
-#pragma once
+#include <graph.hpp>
 
 #include <iostream>
 #include <vector>
 #include <CL/cl.hpp>
-
-template <typename T>
-class Graph {
-
-private:
-	std::vector<T> arr;
-
-public:
-
-	Graph(std::vector< std::vector<T> > host); //Init Graph
-	void printGraph(); // Print Graph
-};
 
 template <typename T>::Graph<T>::Graph(std::vector< std::vector<T> > host) {
 
@@ -33,9 +21,9 @@ template <typename T>::Graph<T>::Graph(std::vector< std::vector<T> > host) {
 }
 
 template <typename T> void::Graph<T>::printGraph() {
-	
+
 	// Print the Graph
-	
+
 	for (auto i = 0; i < arr.size(); ++i) {
 		std::cout << arr[i] << std::endl;
 	}
