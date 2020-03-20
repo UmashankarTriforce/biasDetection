@@ -23,7 +23,7 @@ float score_with_node(int x, int total_score, int *graph, int *component, int *)
 		}
 	}
 	float result = total_score + (new_size * (new_size - 1) / 2);
-	return float;
+	return result;
 }
 
 
