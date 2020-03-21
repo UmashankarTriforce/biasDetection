@@ -1,4 +1,6 @@
 environment
+Debug
+compile_commands.json
 .vs
 out
 build
