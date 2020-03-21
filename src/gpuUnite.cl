@@ -5,7 +5,16 @@ kernel int unite(int x, int total_score, int *graph, int *component, int *sizes,
 	// clSyncThreads();
 	reset_sizes_of_neighbor_component(x, graph, component, sizes, data, score); //NOT DEFINED
 	int new_sizes = sum(data) + 1;
-	int removed_scored = sum(scores);
-	
-	
+	int removed_scores = sum(scores);
+  reassign_components(x, graph.max_node(), united_component, component, sizes); // NOT DEFINED
+  // clSyncThreads();
+  
+  if (thread_id == 0){
+    sizes[united_component] = new_sizes;
+    component[x] = united_component;
+  }
+
+  total_score = total_score - removed_scores + (new_sizes * (new_sizes + 1) / 2);
+  return total_score;
+
 }
