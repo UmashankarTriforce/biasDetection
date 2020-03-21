@@ -45,8 +45,8 @@ template <typename T>::Graph<T>::Graph(std::vector< std::vector<T> > host, int p
 		exit(1);
 	}
 
-	std::cout << "Using platform: " << all_platforms[platformID].getInfo<CL_PLATFORM_NAME>() << std::endl;
-	std::cout << "Using device: " << all_devices[deviceID].getInfo<CL_DEVICE_NAME>() << std::endl;
+	std::cout << "Using platform: " << all_platforms[platformID].getInfo <CL_PLATFORM_NAME> () << std::endl;
+	std::cout << "Using device: " << all_devices[deviceID].getInfo <CL_DEVICE_NAME> () << std::endl;
 
 	default_device = all_devices[deviceID];
 
