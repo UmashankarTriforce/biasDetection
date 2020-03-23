@@ -1,2 +1,3 @@
-add_executable(app "ocl_vector.cpp")
+add_executable(app "testFile.cpp")
 target_link_libraries(app graph_library)
+

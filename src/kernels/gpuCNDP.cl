@@ -28,7 +28,7 @@ float score_with_node(int x, int total_score, int *graph, int *component, int *)
 
 
 void nextCandidate(int *graph, int graphSize, int *data, int dataSize, int total_score, int *component, int *sizes, int *score){
-	
+
   int thread_id = get_global_id(0);
   float min_score = 35000.0;
   for (int i = thread_id + 1; i <= graphSize; i += dataSize ){
@@ -36,7 +36,7 @@ void nextCandidate(int *graph, int graphSize, int *data, int dataSize, int total
     if (component[node_id] == 0){
       float sore = score_with_node(node_id, total_score, graph, sizes, components);
       if (score < min_score){
-        min_score = score; 
+        min_score = score;
         int candidate = node_id;
       }
     }
@@ -62,7 +62,7 @@ int sum (int *data, int T){
 }
 
 int unite(int x, int total_score, int *graph, int *component, int *sizes, int *data, int *score){
-	
+
   int thread_id = get_global_id(0);
   int united_component = any_neighbor_component(x, graph, component); //NOT DEFINED
   // clSyncThreads();
@@ -71,7 +71,7 @@ int unite(int x, int total_score, int *graph, int *component, int *sizes, int *d
   int removed_scores = sum(scores);
   reassign_components(x, graph.max_node(), united_component, component, sizes); // NOT DEFINED
   // clSyncThreads();
-  
+
   if (thread_id == 0){
     sizes[united_component] = new_sizes;
     component[x] = united_component;
@@ -84,7 +84,7 @@ int unite(int x, int total_score, int *graph, int *component, int *sizes, int *d
 
 
 kernel int cndp(int k, int *graph, int *component, int *sizes, int *score){
-  
+
   int block_id = get_work_id(0);
   // component[] <- block_id.component
   // sizes[] <- block_id.sizes
