@@ -160,7 +160,6 @@ int unite(int x, int total_score, int *graph, int *component, int *sizes, int *d
 }
 
 
-<<<<<<< HEAD:src/gpuCNDP.cl
 void remove_maximal_independent_set(int *graph, int *sizes, int *component, int *MIS, int count){
   
   int n = graph[0];
@@ -175,10 +174,6 @@ void remove_maximal_independent_set(int *graph, int *sizes, int *component, int 
 
 kernel int cndp(int k, int *graph, int* MIS, int *component, int *sizes, int *score){
   
-=======
-kernel int cndp(int k, int *graph, int *component, int *sizes, int *score){
-
->>>>>>> 2e7dab9dd932ada8a35de531f1d7b2181f27aa7a:src/kernels/gpuCNDP.cl
   int block_id = get_work_id(0);
   // component[] <- block_id.component
   // sizes[] <- block_id.sizes
