@@ -1,3 +1,80 @@
+kernel void mis_neighbour_addition(int *graph, int *result, int nn) {
+  const int idx = get_global_id(0);
+  int start = num_vertices + 2 + graph[idx];
+    int nn = graph[idx+1] - graph[idx];
+    int flag = 1;
+    for(int j = graph[idx]; j < graph[idx] + nn; ++j) {
+      if(result[start + j]) {
+        flag = 0;
+        break;
+      }
+    }
+    if(flag)
+      result[idx] = 1;
+  }
+}
+
+
+void any_neighbor_component(int x, int *graph, int *component){
+  int neighbour_start = graph[0] + 2 graph[x+1];
+  // as of now the first neighbour is returned, need to include pseudo random generator for the index.
+  return graph[neighbour_start]; 
+}
+
+
+void reset_sizes_of_neighbor_component(int x, int *graph, int *component, int *sizes, int *data, int *score){
+   int neighbour_start = graph[0] + 2 graph[x+1];
+   int neighbour_length = graph[x+2] - graph[x+1]; 
+   for(int i = neighbour_start; i < graph[x] + neighbour_length; i++){
+     int comp = component[graph[i]];
+     sizes[comp] = 0;
+   }
+}
+
+void reassign_components(int x, int max_node, int united_component, int *component, int *sizes){
+  
+  int component_size = max_node;
+  for(int i = 0; i < component_size; i++){
+      int node = graph[i+1];
+      int comp = component[node];
+      if(sizes[comp] == 0){
+        component[node] = united_component;
+      }    
+
+    }
+  }
+
+
+void initializeMIS(int *graph, int *result){
+  int num_vertices = graph[0];
+  for(int i=0; i<num_vertices; ++i) {
+      result[i] = 0
+  }
+  for(int i=1; i<=num_vertices; ++i) {
+    int start = num_vertices + 2 + graph[i];
+    int nn = graph[i+1] - graph[i];
+    int flag = 1;
+    for(int j = graph[i]; j < graph[i] + nn; ++j) {
+      if(result[start + j]) {
+        flag = 0;
+        break;
+      }
+    }
+    if(flag)
+      result[i] = 1;
+  }
+}
+
+
+int count_total_score(int *score, int n){
+  int sum = 0;
+  for(int i = 0; i < n; i++){
+    sum += score[i];
+  }
+  return sum;
+}
+
+
 float score_with_node(int x, int total_score, int *graph, int *component, int *){
 	int beg = graph[x];
 	int end = graph[x + 1];
@@ -64,12 +141,12 @@ int sum (int *data, int T){
 int unite(int x, int total_score, int *graph, int *component, int *sizes, int *data, int *score){
 	
   int thread_id = get_global_id(0);
-  int united_component = any_neighbor_component(x, graph, component); //NOT DEFINED
+  int united_component = any_neighbor_component(x, graph, component);
   // clSyncThreads();
-  reset_sizes_of_neighbor_component(x, graph, component, sizes, data, score); //NOT DEFINED
+  reset_sizes_of_neighbor_component(x, graph, component, sizes, data, score);
   int new_sizes = sum(data) + 1;
   int removed_scores = sum(scores);
-  reassign_components(x, graph.max_node(), united_component, component, sizes); // NOT DEFINED
+  reassign_components(x, graph.max_node(), united_component, component, sizes); 
   // clSyncThreads();
   
   if (thread_id == 0){
@@ -83,24 +160,39 @@ int unite(int x, int total_score, int *graph, int *component, int *sizes, int *d
 }
 
 
-kernel int cndp(int k, int *graph, int *component, int *sizes, int *score){
+void remove_maximal_independent_set(int *graph, int *sizes, int *component, int *MIS, int count){
+  
+  int n = graph[0];
+  for(int i = 0; i < n; i++){
+    if(MIS[i] && count){
+      MIS[i] = 0;
+      count--; 
+    }
+  }
+}
+
+
+kernel int cndp(int k, int *graph, int* MIS, int *component, int *sizes, int *score){
   
   int block_id = get_work_id(0);
   // component[] <- block_id.component
   // sizes[] <- block_id.sizes
-  int selected_count = count_total_score(); // NOT DEFINED
-  int forbidden_count = graph.V() - selected_count; // NOT DEFINED
-  int total_score = compute_total_score(); //NOT DEFINED
+
+  initializeMIS(graph, MIS);
+
+  int selected_count = count_total_score(score); 
+  int forbidden_count = graph[0] - selected_count; 
+  int total_score = count_total_score(score); 
   if (forbidden_count < k){
-    remove_maximal_independent_set(k - forbidden_count); //NOT DEFINED
+    remove_maximal_independent_set(graph, sizes, component, MIS, k - forbidden_count); 
   }
-  while(graph.forbidden_nodes() > k){
+  while(forbidden_count > k){
     next_candidate(graph, total_score, component, sizes, data, score);
     // clSyncThreads();
     int next_node = min(data, score);
     total_score = unite(next_node, total_score, graph, component, sizes, data, score);
     //clSyncThreads();
-    forbidden_count = forbidden_count + 1;
+    forbidden_count = forbidden_count - 1;
   }
 
   return result;
