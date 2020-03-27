@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import random 
 import numpy as np
 from operator import itemgetter
+import cProfile
+import pstats
+import time
+prof = cProfile.Profile()
 
 def any_neighbour_component(G, x, component, marked):
     neighbors = G.neighbors(x)
@@ -74,9 +78,8 @@ def next_candidate(G, component, sizes, marked):
         if(component[node] == 0):
             
             score = score_with_node(G, node, total_score, marked, sizes, component)
-            print(score, min_score)
+            # print(score, min_score)
             if(score < min_score):
-                
                 min_score = score
                 # print(node)
                 candidate = node
@@ -127,25 +130,54 @@ def CNDP_serial(k, G):
         united_comp = any_neighbour_component(G, cand_node, component, marked)
         unite(G, cand_node, marked, united_comp, sizes, component)
         forbidden_count -= 1
-    # print(NodeList, MIS)
+    # print(forbidden_count, len(MIS), len(set(MIS)))
     return list(set(NodeList) - set(MIS))
 if __name__ == "__main__":
-    k = 2
+    k = 10
     
-    randomlist = random.sample(range(0, 4950), 4800)
 
-    G = nx.complete_graph(100)
-    j = 0
-    G1 = nx.Graph()
-    G1.add_nodes_from(G)
-    edgeList = G.edges
-    for i in edgeList:
-        if(j not in randomlist):
-            G1.add_edge(i[0], i[1])
-        j += 1
-    # print(G.size(), G1.size(), len(G.nodes()))
+
+    time_plot = []
+    for numNodes in range(100, 1000, 100):
+        G = nx.complete_graph(numNodes)
+        numEdges = len(G.edges)
+        dropout = int(0.9 * numEdges)
+        forbiddenEdges = random.sample(range(0, numEdges), dropout)
+        j = 0
+        G1 = nx.Graph()
+        G1.add_nodes_from(G)
+        edgeList = G.edges
+        for i in edgeList:
+            if(j not in forbiddenEdges):
+                G1.add_edge(i[0], i[1])
+            j += 1
+        # print(G.size(), G1.size(), len(G.nodes()))
+        start = time.process_time()
+        C_nodes = CNDP_serial(k, G1)
+        time_plot.append(time.process_time() - start)
+        # print(C_nodes)
+    print(time_plot)
+ ################################################   
+    # G1 = nx.read_adjlist("test.adjlist", nodetype = float, delimiter = ",")
+    # n = len(G1.nodes)
+    # mapping = dict(zip(G1, range(0, n)))
+    # G1 = nx.relabel_nodes(G1,mapping)
+    # # print(G1.nodes(), G1.edges())
     
-    C_nodes = CNDP_serial(k, G1)
+    # # prof.enable()
+    # C_nodes = CNDP_serial(k, G1)
+    # # prof.disable()
+    
+    # # prof.dump_stats("result.prof")
+
+    # # ps = pstats.Stats("result.prof")
+    # # ps.sort_stats(pstats.SortKey.CUMULATIVE)
+    # # ps.print_stats()
+
+    # abs = mapping[float(111944435)]
+    # isThere = abs in G1.nodes
+##################################################
+    # print(C_nodes, mapping, isThere)
     # critical_nodes = list(set(C_nodes))
     # degree_all = []
     # useless = []
