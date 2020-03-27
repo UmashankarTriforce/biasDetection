@@ -16,14 +16,14 @@ kernel void mis_neighbour_addition(int *graph, int *result, int nn) {
 
 
 void any_neighbor_component(int x, int *graph, int *component){
-  int neighbour_start = graph[0] + 2 graph[x+1];
+  int neighbour_start = graph[0] + 2 + graph[x+1];
   // as of now the first neighbour is returned, need to include pseudo random generator for the index.
   return graph[neighbour_start]; 
 }
 
 
 void reset_sizes_of_neighbor_component(int x, int *graph, int *component, int *sizes, int *data, int *score){
-   int neighbour_start = graph[0] + 2 graph[x+1];
+   int neighbour_start = graph[0] + 2 + graph[x+1];
    int neighbour_length = graph[x+2] - graph[x+1]; 
    for(int i = neighbour_start; i < graph[x] + neighbour_length; i++){
      int comp = component[graph[i]];
@@ -35,7 +35,7 @@ void reassign_components(int x, int max_node, int united_component, int *compone
   
   int component_size = max_node;
   for(int i = 0; i < component_size; i++){
-      int node = graph[i+1];
+      int node = i+1;
       int comp = component[node];
       if(sizes[comp] == 0){
         component[node] = united_component;
@@ -146,7 +146,8 @@ int unite(int x, int total_score, int *graph, int *component, int *sizes, int *d
   reset_sizes_of_neighbor_component(x, graph, component, sizes, data, score);
   int new_sizes = sum(data) + 1;
   int removed_scores = sum(scores);
-  reassign_components(x, graph.max_node(), united_component, component, sizes); 
+  int max_node = graph.max_node();
+  reassign_components(x, max_node, united_component, component, sizes); 
   // clSyncThreads();
 
   if (thread_id == 0){
