@@ -5,3 +5,7 @@ compile_commands.json
 out
 build
 twitterSentiment
+CMakeFiles
+Makefile
+cmake_install*
+CMakeCache*
