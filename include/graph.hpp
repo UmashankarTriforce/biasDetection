@@ -45,13 +45,21 @@ template <typename T> void::Graph<T>::test() {
 	const int N_ELEMENTS = 1024 * 1024;
 	unsigned int platform_id = 0, device_id = 0;
 
-	std::unique_ptr<int[]> A(new int[N_ELEMENTS]); // Or you can use simple dynamic arrays like: int* A = new int[N_ELEMENTS];
-	std::unique_ptr<int[]> B(new int[N_ELEMENTS]);
-	std::unique_ptr<int[]> C(new int[N_ELEMENTS]);
-
+	// std::unique_ptr<int> k;
+	std::unique_ptr<int[]> graph(new int[N_ELEMENTS]); // Or you can use simple dynamic arrays like: int* A = new int[N_ELEMENTS];
+	std::unique_ptr<int[]> component(new int[N_ELEMENTS]);
+	std::unique_ptr<int[]> sizes(new int[N_ELEMENTS]);
+	std::unique_ptr<int[]> MIS(new int[N_ELEMENTS]);
+	std::unique_ptr<int[]> C_nodes(new int[N_ELEMENTS]);
+	std::unique_ptr<int[]> score(new int[N_ELEMENTS]);
+	// k = 10;
 	for (int i = 0; i < N_ELEMENTS; ++i) {
-		A[i] = i;
-		B[i] = i;
+		graph[i] = i;
+		component[i] = 0;
+		sizes[i] = 0;
+		MIS[i] = 0;
+		score[i] = 0;
+
 	}
 
 	// Create a context
@@ -61,16 +69,25 @@ template <typename T> void::Graph<T>::test() {
 	cl::CommandQueue queue = cl::CommandQueue(context, default_device);   // Select the device.
 
 	// Create the memory buffers
-	cl::Buffer bufferA = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
-	cl::Buffer bufferB = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
-	cl::Buffer bufferC = cl::Buffer(context, CL_MEM_WRITE_ONLY, N_ELEMENTS * sizeof(int));
+	// cl::Buffer bufferK = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+	cl::Buffer bufferGraph = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
+	cl::Buffer bufferComponent = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
+	cl::Buffer bufferSizes = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
+	cl::Buffer bufferMIS = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
+	cl::Buffer bufferScore = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
+	
+	cl::Buffer bufferResult = cl::Buffer(context, CL_MEM_WRITE_ONLY, N_ELEMENTS * sizeof(int));
 
 	// Copy the input data to the input buffers using the command queue.
-	queue.enqueueWriteBuffer(bufferA, CL_FALSE, 0, N_ELEMENTS * sizeof(int), A.get());
-	queue.enqueueWriteBuffer(bufferB, CL_FALSE, 0, N_ELEMENTS * sizeof(int), B.get());
+	// queue.enqueueWriteBuffer(bufferK, CL_FALSE, 0, sizeof(int), k.get());
+	queue.enqueueWriteBuffer(bufferGraph, CL_FALSE, 0, N_ELEMENTS * sizeof(int), graph.get());
+	queue.enqueueWriteBuffer(bufferComponent, CL_FALSE, 0, N_ELEMENTS * sizeof(int), component.get());
+	queue.enqueueWriteBuffer(bufferSizes, CL_FALSE, 0, N_ELEMENTS * sizeof(int), sizes.get());
+	queue.enqueueWriteBuffer(bufferMIS, CL_FALSE, 0, N_ELEMENTS * sizeof(int), MIS.get());
+	queue.enqueueWriteBuffer(bufferScore, CL_FALSE, 0, N_ELEMENTS * sizeof(int), score.get());
 
 	// Read the program source
-	std::ifstream sourceFile("kernels/vector_add_kernel.cl");
+	std::ifstream sourceFile("/home/thejas/Sem 6/HP/biasDetection/src/kernels/gpuCNDP.cl");
 	std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
 	cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()));
 
@@ -81,25 +98,30 @@ template <typename T> void::Graph<T>::test() {
 	program.build({ default_device });
 
 	// Make kernel
-	cl::Kernel vecadd_kernel(program, "vecadd");
-
+	cl::Kernel vecadd_kernel(program, "cndp");
+	// the parameters are int k, int *graph, int* MIS, int *component, int *sizes, int *score
+	// int k = 10;
 	// Set the kernel arguments
-	vecadd_kernel.setArg(0, bufferA);
-	vecadd_kernel.setArg(1, bufferB);
-	vecadd_kernel.setArg(2, bufferC);
-
+	vecadd_kernel.setArg(0, bufferGraph);
+	vecadd_kernel.setArg(1, bufferMIS);
+	vecadd_kernel.setArg(2, bufferComponent);
+	vecadd_kernel.setArg(3, bufferSizes);
+	vecadd_kernel.setArg(4, bufferScore);
+	vecadd_kernel.setArg(5, bufferResult);
+	
 	// Execute the kernel
 	cl::NDRange global(N_ELEMENTS);
 	cl::NDRange local(256);
 	queue.enqueueNDRangeKernel(vecadd_kernel, cl::NullRange, global, local);
 
 	// Copy the output data back to the host
-	queue.enqueueReadBuffer(bufferC, CL_TRUE, 0, N_ELEMENTS * sizeof(int), C.get());
+	queue.enqueueReadBuffer(bufferResult, CL_TRUE, 0, N_ELEMENTS * sizeof(int), C_nodes.get());
 
 	// Verify the result
 	bool result = true;
 	for (int i = 0; i < N_ELEMENTS; i++)
-		if (C[i] != A[i] + B[i]) {
+		if (C_nodes[i] != 1) {
+			
 			result = false;
 			break;
 		}
