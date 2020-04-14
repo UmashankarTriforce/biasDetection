@@ -45,98 +45,103 @@
 //   }
 
 
-// void initializeMIS(int *graph, int *result){
-//   int num_vertices = graph[0];
-//   for(int i=0; i<num_vertices; ++i) {
-//       result[i] = 0
-//   }
-//   for(int i=1; i<=num_vertices; ++i) {
-//     int start = num_vertices + 2 + graph[i];
-//     int nn = graph[i+1] - graph[i];
-//     int flag = 1;
-//     for(int j = graph[i]; j < graph[i] + nn; ++j) {
-//       if(result[start + j]) {
-//         flag = 0;
-//         break;
-//       }
-//     }
-//     if(flag)
-//       result[i] = 1;
-//   }
-// }
+int initializeMIS(global int *graph, global int *result){
+  // printf("hi");
+  int num_vertices = graph[0];
+  // return 1;
+  
+  for(int i=0; i<num_vertices; ++i) {
+      result[i] = 0;
+  }
+  for(int i=1; i<=num_vertices; ++i) {
+    // printf("%d, ", result[i]);
+    int start = num_vertices + 2 + graph[i];
+    int nn = graph[i+1] - graph[i];
+    int flag = 1;
+    for(int j = graph[i]; j < graph[i] + nn; ++j) {
+      if(result[start + j]) {
+        flag = 0;
+        break;
+      }
+    }
+    if(flag)
+      result[i] = 1;
+  }
+  return 1;
+}
 
 
-// int count_total_score(int *score, int n){
-//   int sum = 0;
-//   for(int i = 0; i < n; i++){
-//     sum += score[i];
-//   }
-//   return sum;
-// }
+int count_total_score(global int *score, private int n){
+  int sum = 0;
+  for(int i = 0; i < n; i++){
+    sum += score[i];
+  }
+  return sum;
+}
 
 
-// float score_with_node(int x, int total_score, int *graph, int *component, int *){
-// 	int beg = graph[x];
-// 	int end = graph[x + 1];
-// 	if (end - beg > threshold){    // must bind threshold to a value
-// 		return 99999999999.0
-// 	}
-// 	int new_size = 1;
-// 	for (int i = beg; i < end; ++i){
-// 		int c = component[graph[i]];
-// 		if (c != 0){
-// 			bool was = false;
-// 			for (int j = beg; j < i; ++j){
-// 				if (component[graph[j]] == c){
-// 					was = true;
-// 					break;
-// 				}
-// 			}
-// 			if (was == 0){
-// 				int s = size[c];
-// 				total_score = total_score - (s * (s - 1) / 2);
-// 				new_size = new_size + s;
-// 			}
-// 		}
-// 	}
-// 	float result = total_score + (new_size * (new_size - 1) / 2);
-// 	return result;
-// }
+float score_with_node(int x, int total_score, int *graph, int* size, int *component){
+ 	int beg = graph[x];
+ 	int end = graph[x + 1];
+	int threshold = 0.6;
+ 	if (end - beg > threshold){    // must bind threshold to a value
+ 		return 99999999999.0
+ 	}
+ 	int new_size = 1;
+ 	for (int i = beg; i < end; ++i){
+ 		int c = component[graph[i]];
+ 		if (c != 0){
+ 			bool was = false;
+ 			for (int j = beg; j < i; ++j){
+ 				if (component[graph[j]] == c){
+ 					was = true;
+ 					break;
+ 				}
+ 			}
+ 			if (was == 0){
+ 				int s = size[c];
+ 				total_score = total_score - (s * (s - 1) / 2);
+ 				new_size = new_size + s;
+ 			}
+ 		}
+ 	}
+ 	float result = total_score + (new_size * (new_size - 1) / 2);
+ 	return result;
+ }
 
 
-// void nextCandidate(int *graph, int graphSize, int *data, int dataSize, int total_score, int *component, int *sizes, int *score){
+void nextCandidate(global int *graph, int graphSize, int *data, int dataSize, private int total_score, global int *component, global int *sizes, global int *score, int threadID){
 
-//   int thread_id = get_global_id(0);
-//   float min_score = 35000.0;
-//   for (int i = thread_id + 1; i <= graphSize; i += dataSize ){
-//     int node_id = graph[i];
-//     if (component[node_id] == 0){
-//       float score = score_with_node(node_id, total_score, graph, sizes, components);
-//       if (score < min_score){
-//         min_score = score;
-//         int candidate = node_id;
-//       }
-//     }
-//   }
-//   data[thread_id] = candidate;
-//   score[thread_id] = min_score;
-// }
+  float min_score = 35000.0;
+  for (int i = thread_id + 1; i <= graphSize; i += dataSize ){
+    int node_id = graph[i];
+    if (component[node_id] == 0){
+      float score = score_with_node(node_id, total_score, graph, sizes, components);
+      if (score < min_score){
+         min_score = score;
+         int candidate = node_id;
+      }
+    }
+  }
+  data[thread_id] = candidate;
+  score[thread_id] = min_score;
+}
 
-// int sum (int *data, int T){
-//   int threadID = get_global_id(0);
-//   // clSyncthread();
-//   int t = T;
-//   int h = t / 2;
-//   while (t > 1){
-//     if (threadID + h < t){
-//       data[threadID] = data[threadID] + data[threadID + h];
-//     }
-//     t = t / 2;
-//     h = h / 2;
-//     // clSyncthread();
-//     }
-//   return data[0];
-// }
+int sum (int *data, int T, int threadID){
+ 
+   // clSyncthread();
+   int t = T;
+   int h = t / 2;
+   while (t > 1){
+     if (threadID + h < t){
+       data[threadID] = data[threadID] + data[threadID + h];
+     }
+     t = t / 2;
+     h = h / 2;
+     // clSyncthread();
+   }
+   return data[0];
+}
 
 // int unite(int x, int total_score, int *graph, int *component, int *sizes, int *data, int *score){
 
@@ -161,41 +166,47 @@
 // }
 
 
-// void remove_maximal_independent_set(int *graph, int *sizes, int *component, int *MIS, int count){
+void remove_maximal_independent_set(global int *graph, global int *sizes, global int *component, global int *MIS, private int count){
   
-//   int n = graph[0];
-//   for(int i = 0; i < n; i++){
-//     if(MIS[i] && count){
-//       MIS[i] = 0;
-//       count--; 
-//     }
-//   }
-// }
+  int n = graph[0];
+  for(int i = 0; i < n; i++){
+    if(MIS[i] && count){
+      MIS[i] = 0;
+      count--; 
+    }
+  }
+}
 
 // int k, int *graph, int* MIS, int *component, int *sizes, int *score
 kernel void cndp(global int* graph, global int *MIS, global int* component, global int* sizes, global int* score, global int* result){
   // printf("hi\n");
   int idx = get_global_id(0);
-  result[idx] =  1;
-  // component[] <- block_id.component
-  // sizes[] <- block_id.sizes
-
-  // initializeMIS(graph, MIS);
-
-  // int selected_count = count_total_score(score); 
-  // int forbidden_count = graph[0] - selected_count; 
-  // int total_score = count_total_score(score); 
-  // if (forbidden_count < k){
-  //   remove_maximal_independent_set(graph, sizes, component, MIS, k - forbidden_count); 
-  // }
-  // while(forbidden_count > k){
-  //   nextCandidate(graph, total_score, component, sizes, data, score);
-  //   // clSyncThreads();
-  //   int next_node = min(data, score);
-  //   total_score = unite(next_node, total_score, graph, component, sizes, data, score);
-  //   //clSyncThreads();
-  //   forbidden_count = forbidden_count - 1;
-  // }
+  //result[idx] =  graph[idx];
+  component[idx] = block_id[idx];
+  //sizes[] <- block_id.sizes
+  // int k = 10;
+  int r = initializeMIS(graph, MIS);
+  for(int i = 0; i < graph[0]; i++){
+    printf("%d, ", MIS[i]);
+  }
+  printf("asdfa\n");
+  int k = 10;
+  int selected_count = count_total_score(score, graph[0]); 
+  int forbidden_count = graph[0] - selected_count; 
+  int total_score = count_total_score(score, graph[0]); 
+  // printf("%d\n", forbidden_count);
+  if (forbidden_count < k){
+    remove_maximal_independent_set(graph, sizes, component, MIS, k - forbidden_count); 
+  }
+  forbidden_count = 11;
+  while(forbidden_count > k){
+    nextCandidate(graph, total_score, component, sizes, data, score, idx);
+    // clSyncThreads();
+    int next_node = min(data, score);
+    // total_score = unite(next_node, total_score, graph, component, sizes, data, score);
+    //clSyncThreads();
+    forbidden_count = forbidden_count - 1;
+  }
 
 
   // return result;
