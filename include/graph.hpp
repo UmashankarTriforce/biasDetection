@@ -42,7 +42,7 @@ public:
 };
 
 template <typename T> void::Graph<T>::test() {
-	const int N_ELEMENTS = 1024 * 1024;
+	const int N_ELEMENTS = hostArr.size();
 	unsigned int platform_id = 0, device_id = 0;
 
 	// std::unique_ptr<int> k;
@@ -54,7 +54,7 @@ template <typename T> void::Graph<T>::test() {
 	std::unique_ptr<int[]> score(new int[N_ELEMENTS]);
 	// k = 10;
 	for (int i = 0; i < N_ELEMENTS; ++i) {
-		graph[i] = i;
+		graph[i] = hostArr[i];
 		component[i] = 0;
 		sizes[i] = 0;
 		MIS[i] = 0;
@@ -75,7 +75,7 @@ template <typename T> void::Graph<T>::test() {
 	cl::Buffer bufferSizes = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
 	cl::Buffer bufferMIS = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
 	cl::Buffer bufferScore = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
-	
+
 	cl::Buffer bufferResult = cl::Buffer(context, CL_MEM_WRITE_ONLY, N_ELEMENTS * sizeof(int));
 
 	// Copy the input data to the input buffers using the command queue.
@@ -87,7 +87,7 @@ template <typename T> void::Graph<T>::test() {
 	queue.enqueueWriteBuffer(bufferScore, CL_FALSE, 0, N_ELEMENTS * sizeof(int), score.get());
 
 	// Read the program source
-	std::ifstream sourceFile("/home/thejas/Sem 6/HP/biasDetection/src/kernels/gpuCNDP.cl");
+	std::ifstream sourceFile("D:/Projects/biasDetection/src/kernels/gpuCNDP.cl");
 	std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
 	cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()));
 
@@ -108,7 +108,7 @@ template <typename T> void::Graph<T>::test() {
 	vecadd_kernel.setArg(3, bufferSizes);
 	vecadd_kernel.setArg(4, bufferScore);
 	vecadd_kernel.setArg(5, bufferResult);
-	
+
 	// Execute the kernel
 	cl::NDRange global(N_ELEMENTS);
 	cl::NDRange local(256);
@@ -119,12 +119,12 @@ template <typename T> void::Graph<T>::test() {
 
 	// Verify the result
 	bool result = true;
-	for (int i = 0; i < N_ELEMENTS; i++)
-		if (C_nodes[i] != 1) {
-			
+	for (int i = 0; i < N_ELEMENTS; i++) {
+		if (C_nodes[i] != hostArr[i]) {
 			result = false;
 			break;
 		}
+	}
 	if (result)
 		std::cout << "Success!\n";
 	else

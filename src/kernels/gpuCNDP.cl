@@ -18,13 +18,13 @@
 // void any_neighbor_component(int x, int *graph, int *component){
 //   int neighbour_start = graph[0] + 2 + graph[x+1];
 //   // as of now the first neighbour is returned, need to include pseudo random generator for the index.
-//   return graph[neighbour_start]; 
+//   return graph[neighbour_start];
 // }
 
 
 // void reset_sizes_of_neighbor_component(int x, int *graph, int *component, int *sizes, int *data, int *score){
 //    int neighbour_start = graph[0] + 2 + graph[x+1];
-//    int neighbour_length = graph[x+2] - graph[x+1]; 
+//    int neighbour_length = graph[x+2] - graph[x+1];
 //    for(int i = neighbour_start; i < graph[x] + neighbour_length; i++){
 //      int comp = component[graph[i]];
 //      sizes[comp] = 0;
@@ -32,14 +32,14 @@
 // }
 
 // void reassign_components(int x, int max_node, int united_component, int *component, int *sizes){
-  
+
 //   int component_size = max_node;
 //   for(int i = 0; i < component_size; i++){
 //       int node = i+1;
 //       int comp = component[node];
 //       if(sizes[comp] == 0){
 //         component[node] = united_component;
-//       }    
+//       }
 
 //     }
 //   }
@@ -147,7 +147,7 @@
 //   int new_sizes = sum(data) + 1;
 //   int removed_scores = sum(scores);
 //   int max_node = graph.max_node();
-//   reassign_components(x, max_node, united_component, component, sizes); 
+//   reassign_components(x, max_node, united_component, component, sizes);
 //   // clSyncThreads();
 
 //   if (thread_id == 0){
@@ -162,12 +162,12 @@
 
 
 // void remove_maximal_independent_set(int *graph, int *sizes, int *component, int *MIS, int count){
-  
+
 //   int n = graph[0];
 //   for(int i = 0; i < n; i++){
 //     if(MIS[i] && count){
 //       MIS[i] = 0;
-//       count--; 
+//       count--;
 //     }
 //   }
 // }
@@ -176,17 +176,17 @@
 kernel void cndp(global int* graph, global int *MIS, global int* component, global int* sizes, global int* score, global int* result){
   // printf("hi\n");
   int idx = get_global_id(0);
-  result[idx] =  1;
+  result[idx] = graph[idx];
   // component[] <- block_id.component
   // sizes[] <- block_id.sizes
 
   // initializeMIS(graph, MIS);
 
-  // int selected_count = count_total_score(score); 
-  // int forbidden_count = graph[0] - selected_count; 
-  // int total_score = count_total_score(score); 
+  // int selected_count = count_total_score(score);
+  // int forbidden_count = graph[0] - selected_count;
+  // int total_score = count_total_score(score);
   // if (forbidden_count < k){
-  //   remove_maximal_independent_set(graph, sizes, component, MIS, k - forbidden_count); 
+  //   remove_maximal_independent_set(graph, sizes, component, MIS, k - forbidden_count);
   // }
   // while(forbidden_count > k){
   //   nextCandidate(graph, total_score, component, sizes, data, score);
