@@ -1,7 +1,7 @@
 environment
 Debug
 compile_commands.json
-.vs
+.vs*
 out
 build
 twitterSentiment
