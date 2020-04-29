@@ -45,22 +45,21 @@ template <typename T> void::Graph<T>::test() {
 	const int N_ELEMENTS = hostArr[0];
 	const int graphSize = hostArr.size();
 	unsigned int platform_id = 0, device_id = 0;
-	//std::unique_ptr<int[]> ptr{ new int[5]{1,2,3,4,5} };
-	// std::unique_ptr<int> k;
+	
 	std::unique_ptr<int[]> graph(new int[graphSize]); // Or you can use simple dynamic arrays like: int* A = new int[N_ELEMENTS];
 	std::unique_ptr<int[]> component(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> sizes(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> MIS(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> C_nodes(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> score(new int[N_ELEMENTS]);
-	// k = 10;
+	
 
 	for(int i = 0; i < graphSize; i++){
 		graph[i] = hostArr[i];
 	}
 
 	for (int i = 0; i < N_ELEMENTS; ++i) {
-		// graph[i] = i
+		
 		component[i] = 0;
 		sizes[i] = 0;
 		MIS[i] = 0;
@@ -85,7 +84,6 @@ template <typename T> void::Graph<T>::test() {
 	cl::Buffer bufferResult = cl::Buffer(context, CL_MEM_WRITE_ONLY, N_ELEMENTS * sizeof(int));
 
 	// Copy the input data to the input buffers using the command queue.
-	// queue.enqueueWriteBuffer(bufferK, CL_FALSE, 0, sizeof(int), k.get());
 	queue.enqueueWriteBuffer(bufferGraph, CL_FALSE, 0, graphSize * sizeof(int), graph.get());
 	queue.enqueueWriteBuffer(bufferComponent, CL_FALSE, 0, N_ELEMENTS * sizeof(int), component.get());
 	queue.enqueueWriteBuffer(bufferSizes, CL_FALSE, 0, N_ELEMENTS * sizeof(int), sizes.get());
@@ -106,7 +104,6 @@ template <typename T> void::Graph<T>::test() {
 	// Make kernel
 	cl::Kernel vecadd_kernel(program, "cndp");
 	// the parameters are int k, int *graph, int* MIS, int *component, int *sizes, int *score
-	// int k = 10;
 	// Set the kernel arguments
 	vecadd_kernel.setArg(0, bufferGraph);
 	vecadd_kernel.setArg(1, bufferMIS);
@@ -131,7 +128,6 @@ template <typename T> void::Graph<T>::test() {
 			result = false;
 			break;
 		}
-		// std::cout << MIS[i] << std::endl;
 			
 	if (result)
 		std::cout << "Success!\n";
