@@ -10,12 +10,15 @@ prof = cProfile.Profile()
 
 def any_neighbour_component(G, x, component, marked):
     neighbors = G.neighbors(x)
+    res = []
     for neighbor in neighbors:
         comp = component[neighbor]
         
         if not marked[comp]:
-            return component[comp]
-    return x
+            res.append(comp)
+    if(len(res) >= 1):
+        return random.choice(res)
+    return -1
 
 
 def unite(G, x, marked, united_comp, sizes, components):
@@ -107,56 +110,61 @@ def CNDP_serial(k, G):
 
     component_id = 0
     forbidden_count = 0
-
+    print(len(MIS))
     for i in range(GSize):
-        if(i in NodeList):
+        if(i in MIS):
             component[i] = component_id
             # print(len(sizes))
             sizes[component_id] = 1
             component_id += 1
         else:
             forbidden_count += 1
-
+    print(forbidden_count)
     if forbidden_count < k:
         X = random.sample(range(0, len(MIS)), k - forbidden_count)
         for x in range(len(X)):
             sizes[component[NodeList[x]]] = 0
             component[NodeList[x]] = 0
-
+    print(len(MIS))
+    res = []
     while(forbidden_count > k):
         # print(component)
         
         cand_node = next_candidate(G, component, sizes, marked)
+        # res.append(cand_node)
         united_comp = any_neighbour_component(G, cand_node, component, marked)
-        unite(G, cand_node, marked, united_comp, sizes, component)
-        forbidden_count -= 1
-    # print(forbidden_count, len(MIS), len(set(MIS)))
+        if(united_comp != -1):
+            unite(G, cand_node, marked, united_comp, sizes, component)
+            forbidden_count -= 1
+
+    print(forbidden_count, MIS)
+    # print(len(MIS))
     return list(set(NodeList) - set(MIS))
 if __name__ == "__main__":
     k = 10
     
 
 
-    time_plot = []
-    for numNodes in range(100, 1000, 100):
-        G = nx.complete_graph(numNodes)
-        numEdges = len(G.edges)
-        dropout = int(0.9 * numEdges)
-        forbiddenEdges = random.sample(range(0, numEdges), dropout)
-        j = 0
-        G1 = nx.Graph()
-        G1.add_nodes_from(G)
-        edgeList = G.edges
-        for i in edgeList:
-            if(j not in forbiddenEdges):
-                G1.add_edge(i[0], i[1])
-            j += 1
-        # print(G.size(), G1.size(), len(G.nodes()))
-        start = time.process_time()
-        C_nodes = CNDP_serial(k, G1)
-        time_plot.append(time.process_time() - start)
-        # print(C_nodes)
-    print(time_plot)
+    # time_plot = []
+    # for numNodes in range(100, 1000, 100):
+    G = nx.complete_graph(100)
+    numEdges = len(G.edges)
+    dropout = int(0.9 * numEdges)
+    forbiddenEdges = random.sample(range(0, numEdges), dropout)
+    j = 0
+    G1 = nx.Graph()
+    G1.add_nodes_from(G)
+    edgeList = G.edges
+    for i in edgeList:
+        if(j not in forbiddenEdges):
+            G1.add_edge(i[0], i[1])
+        j += 1
+    # print(G.size(), G1.size(), len(G.nodes()))
+    # start = time.process_time()
+    C_nodes = CNDP_serial(k, G1)
+        # time_plot.append(time.process_time() - start)
+    print(C_nodes, len(C_nodes))
+    # print(time_plot)
  ################################################   
     # G1 = nx.read_adjlist("test.adjlist", nodetype = float, delimiter = ",")
     # n = len(G1.nodes)

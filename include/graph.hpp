@@ -42,19 +42,24 @@ public:
 };
 
 template <typename T> void::Graph<T>::test() {
-	const int N_ELEMENTS = hostArr.size();
+	const int N_ELEMENTS = hostArr[0];
+	const int graphSize = hostArr.size();
 	unsigned int platform_id = 0, device_id = 0;
-
-	// std::unique_ptr<int> k;
-	std::unique_ptr<int[]> graph(new int[N_ELEMENTS]); // Or you can use simple dynamic arrays like: int* A = new int[N_ELEMENTS];
+	
+	std::unique_ptr<int[]> graph(new int[graphSize]); // Or you can use simple dynamic arrays like: int* A = new int[N_ELEMENTS];
 	std::unique_ptr<int[]> component(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> sizes(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> MIS(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> C_nodes(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> score(new int[N_ELEMENTS]);
-	// k = 10;
-	for (int i = 0; i < N_ELEMENTS; ++i) {
+	
+
+	for(int i = 0; i < graphSize; i++){
 		graph[i] = hostArr[i];
+	}
+
+	for (int i = 0; i < N_ELEMENTS; ++i) {
+		
 		component[i] = 0;
 		sizes[i] = 0;
 		MIS[i] = 0;
@@ -70,24 +75,23 @@ template <typename T> void::Graph<T>::test() {
 
 	// Create the memory buffers
 	// cl::Buffer bufferK = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-	cl::Buffer bufferGraph = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
-	cl::Buffer bufferComponent = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
-	cl::Buffer bufferSizes = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
-	cl::Buffer bufferMIS = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
-	cl::Buffer bufferScore = cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(int));
-
+	cl::Buffer bufferGraph = cl::Buffer(context, CL_MEM_READ_WRITE, graphSize * sizeof(int));
+	cl::Buffer bufferComponent = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
+	cl::Buffer bufferSizes = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
+	cl::Buffer bufferMIS = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
+	cl::Buffer bufferScore = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
+	
 	cl::Buffer bufferResult = cl::Buffer(context, CL_MEM_WRITE_ONLY, N_ELEMENTS * sizeof(int));
 
 	// Copy the input data to the input buffers using the command queue.
-	// queue.enqueueWriteBuffer(bufferK, CL_FALSE, 0, sizeof(int), k.get());
-	queue.enqueueWriteBuffer(bufferGraph, CL_FALSE, 0, N_ELEMENTS * sizeof(int), graph.get());
+	queue.enqueueWriteBuffer(bufferGraph, CL_FALSE, 0, graphSize * sizeof(int), graph.get());
 	queue.enqueueWriteBuffer(bufferComponent, CL_FALSE, 0, N_ELEMENTS * sizeof(int), component.get());
 	queue.enqueueWriteBuffer(bufferSizes, CL_FALSE, 0, N_ELEMENTS * sizeof(int), sizes.get());
 	queue.enqueueWriteBuffer(bufferMIS, CL_FALSE, 0, N_ELEMENTS * sizeof(int), MIS.get());
 	queue.enqueueWriteBuffer(bufferScore, CL_FALSE, 0, N_ELEMENTS * sizeof(int), score.get());
 
-	// Read the program source
-	std::ifstream sourceFile("D:/Projects/biasDetection/src/kernels/gpuCNDP.cl");
+	// Read the program source 
+	std::ifstream sourceFile("/home/thejas/Sem 6/HP/biasDetection/src/kernels/gpuCNDP.cl");
 	std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
 	cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()));
 
@@ -100,7 +104,6 @@ template <typename T> void::Graph<T>::test() {
 	// Make kernel
 	cl::Kernel vecadd_kernel(program, "cndp");
 	// the parameters are int k, int *graph, int* MIS, int *component, int *sizes, int *score
-	// int k = 10;
 	// Set the kernel arguments
 	vecadd_kernel.setArg(0, bufferGraph);
 	vecadd_kernel.setArg(1, bufferMIS);
@@ -111,7 +114,7 @@ template <typename T> void::Graph<T>::test() {
 
 	// Execute the kernel
 	cl::NDRange global(N_ELEMENTS);
-	cl::NDRange local(256);
+	cl::NDRange local(1);
 	queue.enqueueNDRangeKernel(vecadd_kernel, cl::NullRange, global, local);
 
 	// Copy the output data back to the host
@@ -119,12 +122,13 @@ template <typename T> void::Graph<T>::test() {
 
 	// Verify the result
 	bool result = true;
-	for (int i = 0; i < N_ELEMENTS; i++) {
+	for (int i = 0; i < N_ELEMENTS; i++)
 		if (C_nodes[i] != hostArr[i]) {
+			std::cout << C_nodes[i] << std::endl;
 			result = false;
 			break;
 		}
-	}
+			
 	if (result)
 		std::cout << "Success!\n";
 	else
