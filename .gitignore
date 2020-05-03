@@ -2,7 +2,7 @@ environment
 Debug
 compile_commands.json
 .vs*
-out
+a.out
 build
 twitterSentiment
 CMakeFiles

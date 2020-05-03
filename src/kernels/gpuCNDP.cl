@@ -19,7 +19,7 @@ void reset_sizes_of_neighbor_component(private int x, global int *graph, global 
 void reassign_components(private int x, private int max_node, private int united_component, global int *component, global int *sizes){
   
   int component_size = max_node;
-  printf("%d\n", united_component);
+  // printf("%d\n", united_component);
   for(int i = 0; i < component_size; i++){
       int node = i+1;
       int comp = component[node];
@@ -27,8 +27,8 @@ void reassign_components(private int x, private int max_node, private int united
         component[node] = united_component;
       }    
 
-    }
   }
+}
 
 //serial MIS algo
 int initializeMIS(global int *graph, global int *result){
@@ -49,10 +49,11 @@ int initializeMIS(global int *graph, global int *result){
         break;
       }
     }
-    if(flag)
+    if(flag){
       result[i-1] = 1;
+    }
   }
-  
+  // printf("%d    %d\n", get_global_id(0) - 1, result[get_global_id(0) - 1]);
   return 1;
 }
 
@@ -71,7 +72,7 @@ float score_with_node(private int x, private int total_score, global int *graph,
 	int end = graph[x + 1];
 
   float threshold = 1000000.0;
-	if ((float)(end - beg) > threshold){    // must bind threshold to a value
+	if ((float)(end - beg) > threshold){
 		return threshold;
 	}
   int new_size = 1;
@@ -201,30 +202,42 @@ void remove_maximal_independent_set(global int *graph, global int *sizes, global
   }
 }
 
+int selected_nodes(global int* MIS, private int size){
+  int res = 0;
+  for(int i = 0; i < size; i++){
+    if(MIS[i]){
+      res++;
+    }
+  }
+  return res;
+}
+
 // int k, int *graph, int* MIS, int *component, int *sizes, int *score
 kernel void cndp(global int* graph, global int *MIS, global int* component, global int* sizes, global int* score, global int* result){
   int idx = get_group_id(0);
   int thread_id = get_global_id(0);
-  
-  // need to do something about this one.
-  __private int data[1024];
+  int NUM = graph[0];
+  //TODO need to do something about this one.
+  //     the array initialisation is not accepting var as an argument.
+  __private int data[7483];
+
   result[thread_id] = graph[thread_id];
-  // component[] <- block_id.component
-  // sizes[] <- block_id.sizes
+  // // component[] <- block_id.component
+  // // sizes[] <- block_id.sizes
 
   barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   int r = initializeMIS(graph, MIS);
+  
   barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-  int k = 10;
-  int selected_count = count_total_score(score, graph[0]); 
+  
+  int k = 2778;
+  int selected_count = selected_nodes(MIS, graph[0]); 
   int forbidden_count = graph[0] - selected_count; 
   int total_score = count_total_score(score, graph[0]); 
   
   if (forbidden_count < k){
     remove_maximal_independent_set(graph, sizes, component, MIS, k - forbidden_count); 
   }
-
-  forbidden_count = 12;
 
   while(forbidden_count > k){
     nextCandidate(thread_id, graph, total_score, component, sizes, data, score);
