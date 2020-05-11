@@ -8,14 +8,44 @@ import pstats
 import time
 prof = cProfile.Profile()
 
+
+def initializeMIS(graph):
+    num_vertices = len(graph.nodes())
+    result = []
+    for i in range(num_vertices):
+        result.append(0)
+    for i in range(num_vertices):
+        neighbors = list(graph.neighbors(i))
+        start = 0
+        # print(neighbors)
+        # return 0
+        end = len(neighbors)
+        flag = 1
+        for i in range(start, end):
+            if(result[neighbors[i]]):
+                flag = 0
+                break
+        if(flag):
+            result[i] = 1
+
+    res = []
+    for i in range(len(result)):
+        if(result[i]):
+            res.append(result[i])
+
+    return res
+
 def any_neighbour_component(G, x, component, marked):
-    neighbors = G.neighbors(x)
-    for neighbor in neighbors:
-        comp = component[neighbor]
-        
-        if not marked[comp]:
-            return component[comp]
-    return x
+    neighbors = list(G.neighbors(x))
+    temp = neighbors[0]
+    while(marked[temp]):
+
+        temp = random.randint(0, len(neighbors) - 1)
+        # print(temp)
+        temp = neighbors[temp]
+
+    # print(component[temp])
+    return component[temp]
 
 
 def unite(G, x, marked, united_comp, sizes, components):
@@ -34,11 +64,13 @@ def unite(G, x, marked, united_comp, sizes, components):
         comp = components[node]
         
         if(np.logical_xor(comp != united_comp, np.logical_xor(comp != 0, marked[comp] == 1))):
+            # print("unn", node, united_comp)
             components[node] = united_comp
             sizes[comp] -= 1
             sizes[united_comp] += 1
 
     for i in range(len(marked)):
+        # print("in")
         marked[i] = 0
     
 
@@ -53,6 +85,7 @@ def score_with_node(G, x, total_score, marked, sizes, component):
         comp = component[neighbor]
         if(comp != 0 and not(marked[comp])):
             marked[comp] = 1
+            
             comp_score = sizes[comp] * (sizes[comp] - 1) / 2
             total_score = total_score - comp_score
             new_size = new_size + sizes[comp]
@@ -69,21 +102,22 @@ def next_candidate(G, component, sizes, marked):
     candidate = 0
     total_score = 0
     nodeList = G.nodes()
-    # print(len(component))
+    # print("comp", len(component), len(set(component)))
     max_component = max(G.nodes())
     for c in range(max_component):
         total_score += sizes[c]*(sizes[c] - 1) / 2
 
     for node in nodeList:
+        # print(node)
         if(component[node] == 0):
             
             score = score_with_node(G, node, total_score, marked, sizes, component)
             # print(score, min_score)
             if(score < min_score):
+                # print("in")
                 min_score = score
-                # print(node)
+                # print(node, score)
                 candidate = node
-    # print(candidate)
     return candidate
 
 
@@ -92,10 +126,10 @@ def CNDP_serial(k, G):
     GSize = G.size()
     NodeList = G.nodes()
     component = list()
-    for i in range(GSize):
+    for i in range(len(NodeList)):
         component.append(0)
 
-    max_component = GSize
+    max_component = len(NodeList)
     sizes = list()
     marked = list()
     for i in range(max_component):
@@ -103,37 +137,40 @@ def CNDP_serial(k, G):
     for i in range(max_component):
         marked.append(0)
 
-    MIS = nx.maximal_independent_set(G)
-
+    # MIS = nx.maximal_independent_set(G)
+    MIS = initializeMIS(G)
     component_id = 0
     forbidden_count = 0
 
     for i in range(GSize):
-        if(i in NodeList):
+        if(i in MIS):
             component[i] = component_id
             # print(len(sizes))
             sizes[component_id] = 1
             component_id += 1
         else:
             forbidden_count += 1
-
+    # print(component, sizes)
     if forbidden_count < k:
         X = random.sample(range(0, len(MIS)), k - forbidden_count)
+        # print("length of x", X)
         for x in range(len(X)):
-            sizes[component[NodeList[x]]] = 0
-            component[NodeList[x]] = 0
-
+            # print(x in NodeList)
+            sizes[component[x]] = 0
+            component[x] = 0
+    # print("aaaaaaaaaaaaaaaaaa", forbidden_count)
     while(forbidden_count > k):
-        # print(component)
+        
         
         cand_node = next_candidate(G, component, sizes, marked)
+        # print(cand_node)
         united_comp = any_neighbour_component(G, cand_node, component, marked)
         unite(G, cand_node, marked, united_comp, sizes, component)
         forbidden_count -= 1
-    # print(forbidden_count, len(MIS), len(set(MIS)))
+    print(forbidden_count, sizes)
     return list(set(NodeList) - set(MIS))
 if __name__ == "__main__":
-    k = 10
+    k = 2778
     
 
 
@@ -158,7 +195,7 @@ if __name__ == "__main__":
     #     # print(C_nodes)
     # print(time_plot)
  ################################################   
-    G1 = nx.read_adjlist("test.adjlist", nodetype = float, delimiter = ",")
+    G1 = nx.read_adjlist("/home/thejas/Sem 6/HP/biasDetection/scripts/test.adjlist", nodetype = float, delimiter = ",")
     n = len(G1.nodes)
     mapping = dict(zip(G1, range(0, n)))
     G1 = nx.relabel_nodes(G1,mapping)
@@ -200,3 +237,12 @@ if __name__ == "__main__":
     # nx.draw_networkx_edges(G1, pos, edgelist=G1.edges)
     # plt.show()
 
+""" 
+real    2m54.688s
+user    2m54.633s
+sys     0m0.052s
+
+real    3m57.521s
+user    3m21.465s
+sys     0m0.164s
+ """
