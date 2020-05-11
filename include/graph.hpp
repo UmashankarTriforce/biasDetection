@@ -119,7 +119,19 @@ template <typename T> void::Graph<T>::test() {
 
 	// Copy the output data back to the host
 	queue.enqueueReadBuffer(bufferResult, CL_TRUE, 0, N_ELEMENTS * sizeof(int), C_nodes.get());
+	/* 
+	real    2m20.331s
+	user    2m18.702s
+	sys     0m0.172s
 
+	real    2m55.184s
+	user    2m35.484s
+	sys     0m0.216s
+
+	real    2m1.084s
+	user    1m59.311s
+	sys     0m0.260s
+	 */
 	// Verify the result
 	bool result = true;
 	for (int i = 0; i < N_ELEMENTS; i++)
