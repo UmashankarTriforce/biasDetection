@@ -117,7 +117,8 @@ void nextCandidate(const private int tid, global int *graph, private int total_s
   float min_score = 35000.0;
   int graphSize = graph[0];
   int candidate = 0;
-  for (int i = thread_id + 1; i <= graphSize; i++){
+  // find the number of threads!!
+  for (int i = thread_id + 1; i <= graphSize; i += graphSize){
     int node_id = i;
     if (component[node_id] == 0){
       float score = score_with_node(node_id, total_score, graph, sizes, component);
@@ -217,28 +218,29 @@ kernel void cndp(global int* graph, global int *MIS, global int* component, glob
   int idx = get_group_id(0);
   int thread_id = get_global_id(0);
   int NUM = graph[0];
+  
   //TODO need to do something about this one.
   //     the array initialisation is not accepting var as an argument.
+
   __private int data[7483];
 
   result[thread_id] = graph[thread_id];
   // // component[] <- block_id.component
   // // sizes[] <- block_id.sizes
 
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+  // barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   int r = initializeMIS(graph, MIS);
   
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+  // barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   
   int k = 2778;
   int selected_count = selected_nodes(MIS, graph[0]); 
   int forbidden_count = graph[0] - selected_count; 
   int total_score = count_total_score(score, graph[0]); 
-  
+  // printf("%d\n", forbidden_count);
   if (forbidden_count < k){
     remove_maximal_independent_set(graph, sizes, component, MIS, k - forbidden_count); 
   }
-
   while(forbidden_count > k){
     nextCandidate(thread_id, graph, total_score, component, sizes, data, score);
     barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
