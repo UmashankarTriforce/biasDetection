@@ -1,4 +1,17 @@
-## Sentiment Analysis on Twittter dataset 
+## Bias Detection in political statements on Twittter dataset.
+
+Two parts:
+  1. Finding the influential users in the network graph using Critical Node Detection Problem. This includes:
+    
+  * Serial implementation:
+        #add stuff
+  * Parallel implementation using OpenCL:
+        #add stuff
+  * Heterogenous implementation using OpenCL:
+        #add stuff
+        
+  2. Topic Modelling of the tweets.
+
 
 The requirements are:
 
