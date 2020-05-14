@@ -49,6 +49,7 @@ template <typename T> void::Graph<T>::test() {
 	std::unique_ptr<int[]> graph(new int[graphSize]); // Or you can use simple dynamic arrays like: int* A = new int[N_ELEMENTS];
 	std::unique_ptr<int[]> component(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> sizes(new int[N_ELEMENTS]);
+	std::unique_ptr<int[]> data(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> MIS(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> C_nodes(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> score(new int[N_ELEMENTS]);
@@ -64,6 +65,7 @@ template <typename T> void::Graph<T>::test() {
 		sizes[i] = 0;
 		MIS[i] = 0;
 		score[i] = 0;
+		data[i] = 0;
 
 	}
 
@@ -77,6 +79,7 @@ template <typename T> void::Graph<T>::test() {
 	// cl::Buffer bufferK = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 	cl::Buffer bufferGraph = cl::Buffer(context, CL_MEM_READ_WRITE, graphSize * sizeof(int));
 	cl::Buffer bufferComponent = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
+	cl::Buffer bufferData = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
 	cl::Buffer bufferSizes = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
 	cl::Buffer bufferMIS = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
 	cl::Buffer bufferScore = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
@@ -86,6 +89,7 @@ template <typename T> void::Graph<T>::test() {
 	// Copy the input data to the input buffers using the command queue.
 	queue.enqueueWriteBuffer(bufferGraph, CL_FALSE, 0, graphSize * sizeof(int), graph.get());
 	queue.enqueueWriteBuffer(bufferComponent, CL_FALSE, 0, N_ELEMENTS * sizeof(int), component.get());
+	queue.enqueueWriteBuffer(bufferData, CL_FALSE, 0, N_ELEMENTS * sizeof(int), data.get());
 	queue.enqueueWriteBuffer(bufferSizes, CL_FALSE, 0, N_ELEMENTS * sizeof(int), sizes.get());
 	queue.enqueueWriteBuffer(bufferMIS, CL_FALSE, 0, N_ELEMENTS * sizeof(int), MIS.get());
 	queue.enqueueWriteBuffer(bufferScore, CL_FALSE, 0, N_ELEMENTS * sizeof(int), score.get());
@@ -108,9 +112,10 @@ template <typename T> void::Graph<T>::test() {
 	vecadd_kernel.setArg(0, bufferGraph);
 	vecadd_kernel.setArg(1, bufferMIS);
 	vecadd_kernel.setArg(2, bufferComponent);
-	vecadd_kernel.setArg(3, bufferSizes);
-	vecadd_kernel.setArg(4, bufferScore);
-	vecadd_kernel.setArg(5, bufferResult);
+	vecadd_kernel.setArg(3, bufferData);
+	vecadd_kernel.setArg(4, bufferSizes);
+	vecadd_kernel.setArg(5, bufferScore);
+	vecadd_kernel.setArg(6, bufferResult);
 
 	// Execute the kernel
 	cl::NDRange global(N_ELEMENTS);
