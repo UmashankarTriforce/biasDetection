@@ -6,7 +6,7 @@ int any_neighbor_component(private int x, global int *graph, global int *compone
 }
 
 
-void reset_sizes_of_neighbor_component(private int x, global int *graph, global int *component, global int *sizes, private int *data, global int *score){
+void reset_sizes_of_neighbor_component(private int x, global int *graph, global int *component, global int *sizes, global int *data, global int *score){
    int neighbour_start = graph[0] + 2 + graph[x+1];
    int neighbour_length = graph[x+2] - graph[x+1]; 
    for(int i = neighbour_start; x < graph[0] && i <= neighbour_start + neighbour_length; i++){
@@ -99,7 +99,7 @@ float score_with_node(private int x, private int total_score, global int *graph,
 	return result;
 }
 
-int minNode(private int* data, global int* score, private int size){
+int minNode(global int* data, global int* score, private int size){
   int min = INT_MAX;
   int res = data[0];
   for(int i = 0; i < size; i++){
@@ -111,14 +111,14 @@ int minNode(private int* data, global int* score, private int size){
 }
 
 // //thread_id, graph, total_score, component, sizes, data, score
-void nextCandidate(const private int tid, global int *graph, private int total_score, global int *component, global int *sizes, private int *data, global int *score){
+void nextCandidate(const private int tid, global int *graph, private int total_score, global int *component, global int *sizes, global int *data, global int *score){
 
   int thread_id = tid;
   float min_score = 35000.0;
   int graphSize = graph[0];
   int candidate = 0;
   // find the number of threads!!
-  for (int i = thread_id + 1; i <= graphSize; i += graphSize){
+  for (int i = thread_id + 1; i <= graphSize; i++){
     int node_id = i;
     if (component[node_id] == 0){
       float score = score_with_node(node_id, total_score, graph, sizes, component);
@@ -132,7 +132,7 @@ void nextCandidate(const private int tid, global int *graph, private int total_s
   score[thread_id] = min_score;
 }
 
-int sum (private int *data, private int T){
+int sum (global int *data, private int T){
   int threadID = get_global_id(0);
   barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   int t = T;
@@ -147,27 +147,10 @@ int sum (private int *data, private int T){
     }
   return data[0];
 }
-
-int sum_scores(global int *data, private int T){
-  int threadID = get_global_id(0);
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-  int t = T;
-  int h = t / 2;
-  while (t > 1){
-    if (threadID + h < t){
-      data[threadID] = data[threadID] + data[threadID + h];
-    }
-    t = t / 2;
-    h = h / 2;
-    barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-    }
-  return data[0];
-}
-
 
 
 // // next_node, total_score, graph, component, sizes, data, scores
-int unite(private int x, private int total_score, global int *graph, global int *component, global int *sizes, private int *data, global int *score){
+int unite(private int x, private int total_score, global int *graph, global int *component, global int *sizes, global int *data, global int *score){
 
   int thread_id = get_global_id(0);
   int united_component = any_neighbor_component(x, graph, component);
@@ -214,15 +197,12 @@ int selected_nodes(global int* MIS, private int size){
 }
 
 // int k, int *graph, int* MIS, int *component, int *sizes, int *score
-kernel void cndp(global int* graph, global int *MIS, global int* component, global int* sizes, global int* score, global int* result){
+kernel void cndp(global int* graph, global int *MIS, global int* component, global int* data, global int* sizes, global int* score, global int* result){
   int idx = get_group_id(0);
   int thread_id = get_global_id(0);
   int NUM = graph[0];
   
-  //TODO need to do something about this one.
-  //     the array initialisation is not accepting var as an argument.
-
-  __private int data[7483];
+  // int data[7483];
 
   result[thread_id] = graph[thread_id];
   // // component[] <- block_id.component
