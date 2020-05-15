@@ -2,13 +2,13 @@
 int any_neighbor_component(private int x, global int *graph, global int *component){
   int neighbour_start = graph[0] + 2 + graph[x+1];
   // as of now the first neighbour is returned, need to include pseudo random generator for the index.
-  return graph[neighbour_start];
+  return graph[neighbour_start]; 
 }
 
 
-void reset_sizes_of_neighbor_component(private int x, global int *graph, global int *component, global int *sizes, private int *data, global int *score){
+void reset_sizes_of_neighbor_component(private int x, global int *graph, global int *component, global int *sizes, global int *data, global int *score){
    int neighbour_start = graph[0] + 2 + graph[x+1];
-   int neighbour_length = graph[x+2] - graph[x+1];
+   int neighbour_length = graph[x+2] - graph[x+1]; 
    for(int i = neighbour_start; x < graph[0] && i <= neighbour_start + neighbour_length; i++){
      int comp = component[graph[i]];
      //must check here
@@ -17,7 +17,7 @@ void reset_sizes_of_neighbor_component(private int x, global int *graph, global 
 }
 
 void reassign_components(private int x, private int max_node, private int united_component, global int *component, global int *sizes){
-
+  
   int component_size = max_node;
   // printf("%d\n", united_component);
   for(int i = 0; i < component_size; i++){
@@ -25,7 +25,7 @@ void reassign_components(private int x, private int max_node, private int united
       int comp = component[node];
       if(sizes[comp] == 0){
         component[node] = united_component;
-      }
+      }    
 
   }
 }
@@ -99,7 +99,7 @@ float score_with_node(private int x, private int total_score, global int *graph,
 	return result;
 }
 
-int minNode(private int* data, global int* score, private int size){
+int minNode(global int* data, global int* score, private int size){
   int min = INT_MAX;
   int res = data[0];
   for(int i = 0; i < size; i++){
@@ -111,12 +111,13 @@ int minNode(private int* data, global int* score, private int size){
 }
 
 // //thread_id, graph, total_score, component, sizes, data, score
-void nextCandidate(const private int tid, global int *graph, private int total_score, global int *component, global int *sizes, private int *data, global int *score){
+void nextCandidate(const private int tid, global int *graph, private int total_score, global int *component, global int *sizes, global int *data, global int *score){
 
   int thread_id = tid;
   float min_score = 35000.0;
   int graphSize = graph[0];
   int candidate = 0;
+  // find the number of threads!!
   for (int i = thread_id + 1; i <= graphSize; i++){
     int node_id = i;
     if (component[node_id] == 0){
@@ -131,7 +132,7 @@ void nextCandidate(const private int tid, global int *graph, private int total_s
   score[thread_id] = min_score;
 }
 
-int sum (private int *data, private int T){
+int sum (global int *data, private int T){
   int threadID = get_global_id(0);
   barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   int t = T;
@@ -146,37 +147,20 @@ int sum (private int *data, private int T){
     }
   return data[0];
 }
-
-int sum_scores(global int *data, private int T){
-  int threadID = get_global_id(0);
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-  int t = T;
-  int h = t / 2;
-  while (t > 1){
-    if (threadID + h < t){
-      data[threadID] = data[threadID] + data[threadID + h];
-    }
-    t = t / 2;
-    h = h / 2;
-    barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-    }
-  return data[0];
-}
-
 
 
 // // next_node, total_score, graph, component, sizes, data, scores
-int unite(private int x, private int total_score, global int *graph, global int *component, global int *sizes, private int *data, global int *score){
+int unite(private int x, private int total_score, global int *graph, global int *component, global int *sizes, global int *data, global int *score){
 
   int thread_id = get_global_id(0);
   int united_component = any_neighbor_component(x, graph, component);
-
+  
   barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   reset_sizes_of_neighbor_component(x, graph, component, sizes, data, score);
   int new_sizes = sum(data, graph[0]) + 1;
   int removed_scores = sum_scores(score, graph[0]);
   int max_node = graph[0] - 1;
-  reassign_components(x, max_node, united_component, component, sizes);
+  reassign_components(x, max_node, united_component, component, sizes); 
   barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 
   if (thread_id == 1){
@@ -192,12 +176,12 @@ int unite(private int x, private int total_score, global int *graph, global int 
 
 
 void remove_maximal_independent_set(global int *graph, global int *sizes, global int *component, global int *MIS, private int count){
-
+  
   int n = graph[0];
   for(int i = 0; i < n; i++){
     if(MIS[i] && count){
       MIS[i] = 0;
-      count--;
+      count--; 
     }
   }
 }
@@ -213,32 +197,30 @@ int selected_nodes(global int* MIS, private int size){
 }
 
 // int k, int *graph, int* MIS, int *component, int *sizes, int *score
-kernel void cndp(global int* graph, global int *MIS, global int* component, global int* sizes, global int* score, global int* result){
+kernel void cndp(global int* graph, global int *MIS, global int* component, global int* data, global int* sizes, global int* score, global int* result){
   int idx = get_group_id(0);
   int thread_id = get_global_id(0);
   int NUM = graph[0];
-  //TODO need to do something about this one.
-  //     the array initialisation is not accepting var as an argument.
-  __private int data[7483];
+  
+  // int data[7483];
 
   result[thread_id] = graph[thread_id];
   // // component[] <- block_id.component
   // // sizes[] <- block_id.sizes
 
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+  // barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   int r = initializeMIS(graph, MIS);
-
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-
+  
+  // barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+  
   int k = 2778;
-  int selected_count = selected_nodes(MIS, graph[0]);
-  int forbidden_count = graph[0] - selected_count;
-  int total_score = count_total_score(score, graph[0]);
-
+  int selected_count = selected_nodes(MIS, graph[0]); 
+  int forbidden_count = graph[0] - selected_count; 
+  int total_score = count_total_score(score, graph[0]); 
+  // printf("%d\n", forbidden_count);
   if (forbidden_count < k){
-    remove_maximal_independent_set(graph, sizes, component, MIS, k - forbidden_count);
+    remove_maximal_independent_set(graph, sizes, component, MIS, k - forbidden_count); 
   }
-
   while(forbidden_count > k){
     nextCandidate(thread_id, graph, total_score, component, sizes, data, score);
     barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
