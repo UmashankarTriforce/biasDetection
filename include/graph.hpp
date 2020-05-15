@@ -7,13 +7,11 @@
 #include <string>
 #include <memory>
 #include <stdlib.h>
+#include <utility>
+#include <time.h>
 
 #define __CL_ENABLE_EXCEPTIONS
-#if defined(__APPLE__) || defined(__MACOSX)
-#include <OpenCL/cl.cpp>
-#else
 #include <CL/cl.hpp>
-#endif
 
 template <typename T>
 class Graph {
@@ -26,40 +24,179 @@ private:
 
 	//OpenCL types
 	std::vector<cl::Platform> all_platforms;
-	std::vector<cl::Device> all_devices;
-	cl::Device default_device;
+	std::vector<std::vector<cl::Device>> all_devices_gpu;
+    std::vector<std::vector<cl::Device>> all_devices_cpu;
+	cl::Device default_cpu_device;
+	cl::Device default_gpu_device;
+
 
 	//Member functions
-	void test();
+
 
 public:
 
 	//Member functions
-	Graph(std::vector< std::vector<T> > host, int platformID = 0, int deviceID = 0); //initialize Graph
-	void printGraph(); // print graph
-	void OpenCLPrintGraph();
+	Graph(std::vector< std::vector<T> > host); //initialize Graph
+	void CNDPHetero();
+	void CNDPParallel();
 
 };
 
-template <typename T> void::Graph<T>::test() {
+template <typename T>::Graph<T>::Graph(std::vector< std::vector<T> > host) {
+
+	//Initialize and get all devices with OpenCL
+
+
+	cl::Platform::get(&all_platforms);
+	if (all_platforms.size() == 0) {
+		std::cout << " No platforms found. Check OpenCL installation!" << std::endl;
+		exit(1);
+	}
+
+    for (auto devices : all_platforms) {
+        std::vector<cl::Device> cpu, gpu;
+        devices.getDevices(CL_DEVICE_TYPE_CPU, &cpu);
+        devices.getDevices(CL_DEVICE_TYPE_GPU, &gpu);
+		if (cpu.size())
+			all_devices_cpu.push_back(cpu);
+		if(gpu.size())
+			all_devices_gpu.push_back(gpu);
+    }
+
+    for (auto device_cpu : all_devices_cpu) {
+        for(auto cpu: device_cpu)
+            std::cout << "Detected CPU " << cpu.getInfo <CL_DEVICE_NAME>() << std::endl;
+    }
+
+    for (auto device_gpu : all_devices_gpu) {
+        for (auto gpu: device_gpu)
+            std::cout << "Detected GPU " << gpu.getInfo <CL_DEVICE_NAME>() << std::endl;
+    }
+
+	std::cout << std::endl;
+
+	default_cpu_device = all_devices_cpu[0][0];
+	default_gpu_device = all_devices_gpu[0][0];
+
+	std::cout << "Using CPU " << default_cpu_device.getInfo <CL_DEVICE_NAME>() << std::endl;
+	std::cout << "Using GPU " << default_gpu_device.getInfo <CL_DEVICE_NAME>() << std::endl;
+
+	//Initialize the Graph in the format of <number of nodes>,<cumulative number of edges>,<edges>
+
+	hostArr.push_back(host.size());
+	int count = 0;
+	hostArr.push_back(count);
+	for (auto i = 0; i < hostArr[0]; ++i) {
+		count += host[i].size();
+		hostArr.push_back(count);
+	}
+	for (auto i = 0; i < hostArr[0]; ++i) {
+		hostArr.insert(hostArr.begin() + hostArr[0] + 2 + hostArr[i + 1], host[i].begin(), host[i].end());
+	}
+}
+
+template <typename T> void::Graph<T>::CNDPHetero() {
+
+	const int graphSize = hostArr[0];
+
+	std::unique_ptr<int []> graph(new int[graphSize]);
+	std::unique_ptr<int []> components(new int[graphSize]);
+	std::unique_ptr<int []> sizes(new int[graphSize]);
+	std::unique_ptr<int []> MISResult(new int[graphSize]);
+	std::unique_ptr<int []> tempArr(new int[2]);
+
+	for (int i = 0; i < graphSize; ++i) {
+		components[i] = 0;
+		graph[i] = hostArr[i];
+	}
+
+	int maxComponent = graphSize;
+	for (int i = 0; i < maxComponent; ++i)
+		sizes[i] = 0;
+
+	cl::Context CPUContext({ default_cpu_device });
+	cl::CommandQueue CPUQueue(CPUContext, default_cpu_device);
+
+	auto bufferGraph = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, graphSize * sizeof(int));
+	auto bufferResult = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, graphSize * sizeof(int));
+
+	CPUQueue.enqueueWriteBuffer(bufferGraph, CL_FALSE, 0, graphSize * sizeof(int), graph.get());
+
+	std::ifstream sourceFile("D:/Projects/biasDetection/src/kernels/heteroCNDP.cl");
+	std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
+	cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()));
+
+	auto CPUProgram = cl::Program(CPUContext, source);
+	CPUProgram.build({ default_cpu_device });
+
+	cl::Kernel MISKernel(CPUProgram, "MISCPU");
+	MISKernel.setArg(0, bufferGraph);
+	MISKernel.setArg(1, bufferResult);
+
+	cl::NDRange global(1);
+	cl::NDRange local(graphSize);
+
+	CPUQueue.enqueueNDRangeKernel(MISKernel, cl::NullRange, global, local);
+
+	tempArr[0] = 1; //component_id
+	tempArr[1] = 0; //forbidden_count
+
+	auto bufferTemp = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, 2 * sizeof(int));
+	auto bufferSize = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, maxComponent * sizeof(int));
+	auto bufferComponent = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, graphSize * sizeof(int));
+	CPUQueue.enqueueWriteBuffer(bufferTemp, CL_FALSE, 0, 2 * sizeof(int), tempArr.get());
+	CPUQueue.enqueueWriteBuffer(bufferSize, CL_FALSE, 0, maxComponent * sizeof(int), sizes.get());
+	CPUQueue.enqueueWriteBuffer(bufferComponent, CL_FALSE, 0, graphSize * sizeof(int), components.get());
+
+	cl::Kernel compKernel(CPUProgram, "CompCPU");
+	compKernel.setArg(0, bufferComponent);
+	compKernel.setArg(1, bufferSize);
+	compKernel.setArg(2, bufferResult);
+	compKernel.setArg(3, bufferTemp);
+
+	CPUQueue.enqueueNDRangeKernel(compKernel, cl::NullRange, global, local);
+	CPUQueue.enqueueReadBuffer(bufferTemp, CL_TRUE, 0, 2 * sizeof(int), tempArr.get());
+
+	int k = 5;
+	if (tempArr[1] < k) {
+		const int chosenNodeCount = k - tempArr[1];
+		std::unique_ptr<int[]> chosenNodes(new int[chosenNodeCount]);
+		srand(time(NULL));
+		for (int i = 0; i < chosenNodeCount; ++i) {
+			chosenNodes[i] = rand() % graphSize;
+		}
+		auto bufferChosenNodes = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, chosenNodeCount * sizeof(int));
+		CPUQueue.enqueueWriteBuffer(bufferChosenNodes, CL_FALSE, 0, chosenNodeCount * sizeof(int), chosenNodes.get());
+		cl::Kernel trivialCPUKernel(CPUProgram, "trivialCPU");
+		trivialCPUKernel.setArg(0, bufferChosenNodes);
+		trivialCPUKernel.setArg(1, bufferSize);
+		trivialCPUKernel.setArg(2, bufferComponent);
+		cl::NDRange localTrivial(chosenNodeCount);
+		CPUQueue.enqueueNDRangeKernel(trivialCPUKernel, cl::NullRange, global, localTrivial);
+	}
+	while (temp[1] > k) {
+
+	}
+}
+
+template <typename T> void::Graph<T>::CNDPParallel() {
 	const int N_ELEMENTS = hostArr[0];
 	const int graphSize = hostArr.size();
 	unsigned int platform_id = 0, device_id = 0;
-	
+
 	std::unique_ptr<int[]> graph(new int[graphSize]); // Or you can use simple dynamic arrays like: int* A = new int[N_ELEMENTS];
 	std::unique_ptr<int[]> component(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> sizes(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> MIS(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> C_nodes(new int[N_ELEMENTS]);
 	std::unique_ptr<int[]> score(new int[N_ELEMENTS]);
-	
 
-	for(int i = 0; i < graphSize; i++){
+	for (int i = 0; i < graphSize; i++) {
 		graph[i] = hostArr[i];
 	}
 
 	for (int i = 0; i < N_ELEMENTS; ++i) {
-		
+
 		component[i] = 0;
 		sizes[i] = 0;
 		MIS[i] = 0;
@@ -80,7 +217,6 @@ template <typename T> void::Graph<T>::test() {
 	cl::Buffer bufferSizes = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
 	cl::Buffer bufferMIS = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
 	cl::Buffer bufferScore = cl::Buffer(context, CL_MEM_READ_WRITE, N_ELEMENTS * sizeof(int));
-	
 	cl::Buffer bufferResult = cl::Buffer(context, CL_MEM_WRITE_ONLY, N_ELEMENTS * sizeof(int));
 
 	// Copy the input data to the input buffers using the command queue.
@@ -90,7 +226,7 @@ template <typename T> void::Graph<T>::test() {
 	queue.enqueueWriteBuffer(bufferMIS, CL_FALSE, 0, N_ELEMENTS * sizeof(int), MIS.get());
 	queue.enqueueWriteBuffer(bufferScore, CL_FALSE, 0, N_ELEMENTS * sizeof(int), score.get());
 
-	// Read the program source 
+	// Read the program source
 	std::ifstream sourceFile("/home/thejas/Sem 6/HP/biasDetection/src/kernels/gpuCNDP.cl");
 	std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
 	cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()));
@@ -128,7 +264,7 @@ template <typename T> void::Graph<T>::test() {
 			result = false;
 			break;
 		}
-			
+
 	if (result)
 		std::cout << "Success!\n";
 	else
@@ -137,52 +273,5 @@ template <typename T> void::Graph<T>::test() {
 	std::cout << "Done.\n";
 }
 
-template <typename T>::Graph<T>::Graph(std::vector< std::vector<T> > host, int platformID, int deviceID) {
 
-	//Initialize and get all devices with OpenCL
 
-	cl::Platform::get(&all_platforms);
-	if (all_platforms.size() == 0) {
-		std::cout << " No platforms found. Check OpenCL installation!" << std::endl;
-		exit(1);
-	}
-
-	all_platforms[platformID].getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
-	if (all_devices.size() == 0) {
-		std::cout << " No devices found. Check OpenCL installation!" << std::endl;
-		exit(1);
-	}
-
-	std::cout << "Using platform: " << all_platforms[platformID].getInfo <CL_PLATFORM_NAME> () << std::endl;
-	std::cout << "Using device: " << all_devices[deviceID].getInfo <CL_DEVICE_NAME> () << std::endl;
-
-	default_device = all_devices[deviceID];
-
-	//Initialize the Graph in the format of <number of nodes>,<cumulative number of edges>,<edges>
-
-	hostArr.push_back(host.size());
-	int count = 0;
-	hostArr.push_back(count);
-	for (auto i = 0; i < hostArr[0]; ++i) {
-		count += host[i].size();
-		hostArr.push_back(count);
-	}
-	for (auto i = 0; i < hostArr[0]; ++i) {
-		hostArr.insert(hostArr.begin() + hostArr[0] + 2 + hostArr[i + 1], host[i].begin(), host[i].end());
-	}
-
-	test();
-
-}
-
-template <typename T> void::Graph<T>::printGraph() {
-
-	// Print the Graph
-
-	for (auto i = 0; i < hostArr.size(); ++i) {
-		std::cout << hostArr[i] << std::endl;
-	}
-}
-
-template <typename T> void::Graph<T>::OpenCLPrintGraph() {
-}
