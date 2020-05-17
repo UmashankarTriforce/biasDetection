@@ -204,6 +204,7 @@ template <typename T> void::Graph<T>::CNDPHetero() {
 	while (temp[1] > k) {
 		CPUQueue.enqueueNDRangeKernel(nextCandidate, cl::NullRange, global, local);
 		GPUQueue.enqueueNDRangeKernel(unite, cl::NullRange, global, local);
+		--temp[1];
 	}
 }
 
