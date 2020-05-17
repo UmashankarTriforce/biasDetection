@@ -68,9 +68,10 @@ float score_with_node(private int x, private int total_score, global int* graph,
     return result;
 }
 
-kernel void nextCandidate(global int* graph, private int total_score, global int* component, global int* sizes, global int* data, global int* score) {
+kernel void nextCandidate(global int* graph, global int* component, global int* sizes, global int* data, global int* score) {
 
     int thread_id = get_global_id(0);
+    int total_score = 0;
     float min_score = 35000.0;
     int graphSize = graph[0];
     int candidate = 0;
@@ -111,13 +112,14 @@ int sum (global int *data, private int T){
   return data[0];
 }
 
-kernel void unite(private int x, private int total_score, global int *graph, global int *component, global int *sizes, global int *data, global int *score){
+kernel void unite(global int *graph, global int *component, global int *sizes, global int *data, global int *score){
 
   int thread_id = get_global_id(0);
   int united_component = any_neighbor_component(x, graph, component);
   int new_sizes = sum(data, graph[0]) + 1;
   int removed_scores = sum_scores(score, graph[0]);
   int max_node = graph[0] - 1;
+  int total_score = 0;
 
   if (thread_id == 1){
     sizes[united_component] = new_sizes;

@@ -103,11 +103,15 @@ template <typename T> void::Graph<T>::CNDPHetero() {
 	std::unique_ptr<int []> components(new int[graphSize]);
 	std::unique_ptr<int []> sizes(new int[graphSize]);
 	std::unique_ptr<int []> MISResult(new int[graphSize]);
-	std::unique_ptr<int []> tempArr(new int[2]);
+	std::unique_ptr<int	[]> data(new int[graphSize]);
+	std::unique_ptr<int	[]> score(new int[graphSize]);
+	std::unique_ptr<int	[]> tempArr(new int[2]);
 
 	for (int i = 0; i < graphSize; ++i) {
 		components[i] = 0;
 		graph[i] = hostArr[i];
+		data[i] = 0;
+		score[i] = 0;
 	}
 
 	int maxComponent = graphSize;
@@ -115,19 +119,25 @@ template <typename T> void::Graph<T>::CNDPHetero() {
 		sizes[i] = 0;
 
 	cl::Context CPUContext({ default_cpu_device });
+	cl::Context GPUContext({ default_gpu_device });
 	cl::CommandQueue CPUQueue(CPUContext, default_cpu_device);
+	cl::CommandQueue GPUQueue(GPUContext, default_gpu_device);
 
-	auto bufferGraph = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, graphSize * sizeof(int));
-	auto bufferResult = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, graphSize * sizeof(int));
+	auto bufferGraph = cl::Buffer(CPUContext, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, graphSize * sizeof(int));
+	auto bufferData = cl::Buffer(CPUContext, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, graphSize * sizeof(int));
+	auto bufferResult = cl::Buffer(CPUContext, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, graphSize * sizeof(int));
+	auto bufferScore = cl::Buffer(CPUContext, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, graphSize * sizeof(int));
 
-	CPUQueue.enqueueWriteBuffer(bufferGraph, CL_FALSE, 0, graphSize * sizeof(int), graph.get());
+	CPUQueue.enqueueWriteBuffer(bufferGraph, CL_FALSE | CL_MEM_USE_HOST_PTR, 0, graphSize * sizeof(int), graph.get());
 
 	std::ifstream sourceFile("D:/Projects/biasDetection/src/kernels/heteroCNDP.cl");
 	std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
 	cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()));
 
 	auto CPUProgram = cl::Program(CPUContext, source);
+	auto GPUProgram = cl::Program(GPUContext, source);
 	CPUProgram.build({ default_cpu_device });
+	GPUProgram.build({ default_gpu_device });
 
 	cl::Kernel MISKernel(CPUProgram, "MISCPU");
 	MISKernel.setArg(0, bufferGraph);
@@ -141,12 +151,14 @@ template <typename T> void::Graph<T>::CNDPHetero() {
 	tempArr[0] = 1; //component_id
 	tempArr[1] = 0; //forbidden_count
 
-	auto bufferTemp = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, 2 * sizeof(int));
-	auto bufferSize = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, maxComponent * sizeof(int));
-	auto bufferComponent = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, graphSize * sizeof(int));
+	auto bufferTemp = cl::Buffer(CPUContext, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, 2 * sizeof(int));
+	auto bufferSize = cl::Buffer(CPUContext, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, maxComponent * sizeof(int));
+	auto bufferComponent = cl::Buffer(CPUContext, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, graphSize * sizeof(int));
 	CPUQueue.enqueueWriteBuffer(bufferTemp, CL_FALSE, 0, 2 * sizeof(int), tempArr.get());
 	CPUQueue.enqueueWriteBuffer(bufferSize, CL_FALSE, 0, maxComponent * sizeof(int), sizes.get());
 	CPUQueue.enqueueWriteBuffer(bufferComponent, CL_FALSE, 0, graphSize * sizeof(int), components.get());
+	CPUQueue.enqueueWriteBuffer(bufferData, CL_FALSE, 0, graphSize * sizeof(int), data.get());
+	CPUQueue.enqueueWriteBuffer(bufferScore, CL_FALSE, 0, graphSize * sizeof(int), score.get());
 
 	cl::Kernel compKernel(CPUProgram, "CompCPU");
 	compKernel.setArg(0, bufferComponent);
@@ -157,7 +169,7 @@ template <typename T> void::Graph<T>::CNDPHetero() {
 	CPUQueue.enqueueNDRangeKernel(compKernel, cl::NullRange, global, local);
 	CPUQueue.enqueueReadBuffer(bufferTemp, CL_TRUE, 0, 2 * sizeof(int), tempArr.get());
 
-	int k = 5;
+	int k = 2774;
 	if (tempArr[1] < k) {
 		const int chosenNodeCount = k - tempArr[1];
 		std::unique_ptr<int[]> chosenNodes(new int[chosenNodeCount]);
@@ -165,7 +177,7 @@ template <typename T> void::Graph<T>::CNDPHetero() {
 		for (int i = 0; i < chosenNodeCount; ++i) {
 			chosenNodes[i] = rand() % graphSize;
 		}
-		auto bufferChosenNodes = cl::Buffer(CPUContext, CL_MEM_READ_WRITE, chosenNodeCount * sizeof(int));
+		auto bufferChosenNodes = cl::Buffer(CPUContext, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, chosenNodeCount * sizeof(int));
 		CPUQueue.enqueueWriteBuffer(bufferChosenNodes, CL_FALSE, 0, chosenNodeCount * sizeof(int), chosenNodes.get());
 		cl::Kernel trivialCPUKernel(CPUProgram, "trivialCPU");
 		trivialCPUKernel.setArg(0, bufferChosenNodes);
@@ -174,8 +186,24 @@ template <typename T> void::Graph<T>::CNDPHetero() {
 		cl::NDRange localTrivial(chosenNodeCount);
 		CPUQueue.enqueueNDRangeKernel(trivialCPUKernel, cl::NullRange, global, localTrivial);
 	}
-	while (temp[1] > k) {
 
+	cl::Kernel nextCandidate(CPUProgram, "nextCandidate");
+	nextCandidate.setArg(0, bufferGraph);
+	nextCandidate.setArg(1, bufferComponent);
+	nextCandidate.setArg(2, bufferSize);
+	nextCandidate.setArg(3, bufferData);
+	nextCandidate.setArg(4, bufferScore);
+
+	cl::Kernel unite(GPUProgram, "unite");
+	unite.setArg(0, bufferGraph);
+	unite.setArg(1, bufferComponent);
+	unite.setArg(2, bufferSize);
+	unite.setArg(3, bufferData);
+	unite.setArg(4, bufferScore);
+
+	while (temp[1] > k) {
+		CPUQueue.enqueueNDRangeKernel(nextCandidate, cl::NullRange, global, local);
+		GPUQueue.enqueueNDRangeKernel(unite, cl::NullRange, global, local);
 	}
 }
 
@@ -207,10 +235,10 @@ template <typename T> void::Graph<T>::CNDPParallel() {
 	}
 
 	// Create a context
-	cl::Context context({ default_device });
+	cl::Context context({ default_gpu_device });
 
 	// Create a command queue
-	cl::CommandQueue queue = cl::CommandQueue(context, default_device);   // Select the device.
+	cl::CommandQueue queue = cl::CommandQueue(context, default_gpu_device);   // Select the device.
 
 	// Create the memory buffers
 	// cl::Buffer bufferK = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
@@ -260,19 +288,6 @@ template <typename T> void::Graph<T>::CNDPParallel() {
 
 	// Copy the output data back to the host
 	queue.enqueueReadBuffer(bufferResult, CL_TRUE, 0, N_ELEMENTS * sizeof(int), C_nodes.get());
-	/* 
-	real    2m20.331s
-	user    2m18.702s
-	sys     0m0.172s
-
-	real    2m55.184s
-	user    2m35.484s
-	sys     0m0.216s
-
-	real    2m1.084s
-	user    1m59.311s
-	sys     0m0.260s
-	 */
 	// Verify the result
 	bool result = true;
 	for (int i = 0; i < N_ELEMENTS; i++)
