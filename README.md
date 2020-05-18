@@ -3,12 +3,12 @@
 Two parts:
   1. Finding the influential users in the network graph using Critical Node Detection Problem. This includes:
     
-  * Serial implementation:
-        #add stuff
-  * Parallel implementation using OpenCL:
-        #add stuff
-  * Heterogenous implementation using OpenCL:
-        #add stuff
+  * Serial implementation
+
+  * Parallel implementation using OpenCL
+
+  * Heterogenous implementation using OpenCL
+
         
   2. Topic Modelling of the tweets.
 
