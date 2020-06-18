@@ -158,7 +158,7 @@ int unite(private int x, private int total_score, global int *graph, global int 
   barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   reset_sizes_of_neighbor_component(x, graph, component, sizes, data, score);
   int new_sizes = sum(data, graph[0]) + 1;
-  int removed_scores = sum_scores(score, graph[0]);
+  int removed_scores = sum(score, graph[0]);
   int max_node = graph[0] - 1;
   reassign_components(x, max_node, united_component, component, sizes); 
   barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
@@ -210,7 +210,14 @@ kernel void cndp(global int* graph, global int *MIS, global int* component, glob
 
   // barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   int r = initializeMIS(graph, MIS);
-  
+  int count = 0;
+  for(int i = 0; i < graph[0]; i++){
+    if(MIS[i] && count++){
+      int a = 1;
+    }
+      // printf("%d\n", i);
+  }
+  printf("%d\n", count);
   // barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   
   int k = 2778;
