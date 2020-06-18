@@ -16,7 +16,7 @@ void test_on_dummy() {
 	};
 
 	Graph<int> Test(test);
-	
+
 }
 
 int main(){
@@ -26,7 +26,7 @@ int main(){
     string line;
     vector<vector<int>> adjlist;
     unordered_map<float, int> map;
-    
+
     if(myfile.is_open()){
         vector<string> result;
 		int k = 0;
