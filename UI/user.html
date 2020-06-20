@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<body onload = "init()">
+<body>
 
     <h1>BIAS DETECTION IN POLITICAL STATEMENTS</h1>
     
@@ -7,28 +7,13 @@
     <p id = "layout"></p>
     <p id="demo"></p> 
     <script>
-	function init(){
-		var x = document.getElementById("inf");
-		var y = document.getElementById("bias");
-		y.style.display = "none";
-		x.style.display = "none";
-	}
-	function loadInf() {
-		var x = document.getElementById("inf");
-		var y = document.getElementById("bias");
-		
-			y.style.display = "none";
-			x.style.display = "block";
-	
-		
-	}
-    function loadBias(){
-	var x = document.getElementById("inf");
-	var y = document.getElementById("bias");
-		x.style.display = "none";
-		y.style.display = "block";
-	
-    }
+	// function init(){
+	// 	var x = document.getElementById("inf");
+	// 	var y = document.getElementById("bias");
+	// 	y.style.display = "none";
+	// 	x.style.display = "none";
+	// }
+
     function loadDoc() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
@@ -36,10 +21,10 @@
           document.getElementById("demo").innerHTML = this.responseText;
         }
       };
-      xhttp.open("POST", "http://localhost:1729/hp/influencers", true);
+      xhttp.open("POST", "http://localhost:2004/hp/influencers", true);
       xhttp.setRequestHeader("Content-type", "text/plain");
       //xhttp.setRequestHeader("dataType", "json");
-      var request = "{\"fname\":\""+document.getElementById("fname").value+"\",\"lname\":\""+document.getElementById("statement").value +"\"}";
+      var request = "{\"topic\":\""+document.getElementById("topic").value+"\",\"fname\":\""+document.getElementById("fname").value+"\",\"statement\":\""+document.getElementById("statement").value +"\"}";
       console.log(request)
       var jsonreq = JSON.parse(request);
       console.log(jsonreq);
@@ -47,19 +32,14 @@
     }
     </script>
      <form id = "bias">
+        <label for = "topic"> Topic/Keywords related to a political issue: </label>
+        <input type = "text" id = "topic" name = "topic"><br><br>
         <label for="fname">Twitter User ID:</label>
         <input type="text" id="fname" name="fname"><br><br>
         <label for="statement">Statement made:</label>
         <input type="text" id="statement" name="statement"><br><br>
-        <button type="button" onclick="loadDoc()">Get the Bias!</button>
+        <button type="button" onclick="loadDoc()">Get the Results!</button>
+
       </form> 
-        <form id = "inf" >
-	<label for = "topic"> Topic/Keywords related to a political issue: </label>
-	<input type = "text" id = "topic" name = "topic"><br><br>
-        <button type="button" onclick="loadDoc()">Get Influencers!</button>
-	</form>	 
-	<h4>Navigation:</h4>
-	<button type="button" class = "x" onclick="loadInf()">Show the influencers</button>
-        <button type="button" class = "x" onclick="loadBias()">Get Bias of a user</button>      
 </body>
 </html>
